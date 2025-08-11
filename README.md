@@ -6,7 +6,7 @@
 
 ```
 huchenghe/
-├── huchanghe-frontend/     # 前端项目目录
+├── huchenghe-frontend/     # 前端项目目录
 │   ├── src/                # 前端源代码
 │   │   ├── assets/         # 静态资源文件
 │   │   ├── components/     # 可复用组件

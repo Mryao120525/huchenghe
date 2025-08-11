@@ -27,11 +27,12 @@
 
 const mysql = require('mysql2');
 
+// 从环境变量获取数据库配置，如果不存在则使用默认值
 const pool = mysql.createPool({
-  host: 'localhost',
-  user: 'root',
-  password: 'Bkc123456',
-  database: 'huchenghe',
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || 'Bkc123456',
+  database: process.env.DB_NAME || 'huchenghe',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
