@@ -61,17 +61,25 @@ const pool = require('../db');
 // 登录接口
 router.post('/login', (req, res) => {
   const { username, password } = req.body;
+  console.log('收到登录请求:', { username, password });
+  
   if (!username || !password) {
+    console.log('登录验证失败: 账号或密码为空');
     return res.json({ success: false, message: '账号和密码不能为空' });
   }
   pool.execute(
     'SELECT * FROM user WHERE phone = ? AND password = ?',
     [username, password],
     (err, results) => {
-      if (err) return res.json({ success: false, message: '数据库错误' });
+      if (err) {
+        console.error('登录查询失败:', err);
+        return res.json({ success: false, message: '数据库错误' });
+      }
       if (results.length > 0) {
+        console.log('登录成功:', results[0].id);
         res.json({ success: true, message: '登录成功', user: results[0] });
       } else {
+        console.log('登录失败: 账号或密码错误');
         res.json({ success: false, message: '账号或密码错误' });
       }
     }
@@ -80,27 +88,44 @@ router.post('/login', (req, res) => {
 
 // 获取用户列表（管理员功能）
 router.get('/users', (req, res) => {
-  pool.execute('SELECT id, username, role, email FROM user', (err, results) => {
-    if (err) return res.status(500).json({ message: '查询失败' });
+  console.log('收到获取用户列表请求');
+  pool.execute('SELECT id, username, phone, role, email FROM user', (err, results) => {
+    if (err) {
+      console.error('查询用户列表失败:', err);
+      return res.status(500).json({ message: '查询失败' });
+    }
+    console.log('成功获取用户列表，用户数量:', results.length);
     res.json(results);
   });
 });
 
 // 添加用户
 router.post('/users', (req, res) => {
-  const { username, role, email } = req.body;
+  const { username, role, email, phone, password } = req.body;
+  console.log('收到添加用户请求:', { username, role, email, phone, password });
+  
   // 简单验证
-  if (!username || !role) {
-    return res.status(400).json({ message: '用户名和角色不能为空' });
+  if (!username || !role || !phone) {
+    console.log('验证失败: 用户名、角色或手机号为空');
+    return res.status(400).json({ message: '用户名、手机号和角色不能为空' });
   }
   
-  // 这里应该有更复杂的密码生成逻辑，暂时使用默认密码
-  const defaultPassword = '123456';
+  // 如果提供了密码就使用提供的密码，否则使用默认密码
+  const userPassword = password || '123456';
+  console.log('准备插入用户数据到数据库');
+  
   pool.execute(
-    'INSERT INTO user (username, role, email, password) VALUES (?, ?, ?, ?)',
-    [username, role, email, defaultPassword],
+    'INSERT INTO user (username, phone, role, email, password) VALUES (?, ?, ?, ?, ?)',
+    [username, phone, role, email, userPassword],
     (err, results) => {
-      if (err) return res.status(500).json({ message: '添加用户失败' });
+      if (err) {
+        console.error('添加用户失败:', err);
+        if (err.code === 'ER_DUP_ENTRY') {
+          return res.status(400).json({ message: '手机号已存在，请使用其他手机号' });
+        }
+        return res.status(500).json({ message: '添加用户失败: ' + err.message });
+      }
+      console.log('用户添加成功:', results.insertId);
       res.json({ message: '用户添加成功', userId: results.insertId });
     }
   );
@@ -109,20 +134,31 @@ router.post('/users', (req, res) => {
 // 更新用户
 router.put('/users/:id', (req, res) => {
   const { id } = req.params;
-  const { username, role, email } = req.body;
+  const { username, role, email, phone } = req.body;
   
-  if (!username || !role) {
-    return res.status(400).json({ message: '用户名和角色不能为空' });
+  console.log('收到更新用户请求:', { id, username, role, email, phone });
+  
+  if (!username || !role || !phone) {
+    console.log('验证失败: 用户名、角色或手机号为空');
+    return res.status(400).json({ message: '用户名、手机号和角色不能为空' });
   }
   
   pool.execute(
-    'UPDATE user SET username = ?, role = ?, email = ? WHERE id = ?',
-    [username, role, email, id],
+    'UPDATE user SET username = ?, phone = ?, role = ?, email = ? WHERE id = ?',
+    [username, phone, role, email, id],
     (err, results) => {
-      if (err) return res.status(500).json({ message: '更新用户失败' });
+      if (err) {
+        console.error('更新用户失败:', err);
+        if (err.code === 'ER_DUP_ENTRY') {
+          return res.status(400).json({ message: '手机号已存在，请使用其他手机号' });
+        }
+        return res.status(500).json({ message: '更新用户失败: ' + err.message });
+      }
       if (results.affectedRows === 0) {
+        console.log('用户不存在:', id);
         return res.status(404).json({ message: '用户不存在' });
       }
+      console.log('用户更新成功:', id);
       res.json({ message: '用户更新成功' });
     }
   );

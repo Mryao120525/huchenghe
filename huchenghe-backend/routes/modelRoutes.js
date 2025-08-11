@@ -174,8 +174,7 @@ router.get('/', (req, res) => {
   // 添加分页
   const offset = (page - 1) * pageSize;
   sql += ' LIMIT ?, ?';
-  params.push(parseInt(offset));
-  params.push(parseInt(pageSize));
+  params.push(parseInt(offset), parseInt(pageSize));
   
   pool.execute(sql, params, (err, results) => {
     if (err) return res.status(500).json({ message: '查询失败' });

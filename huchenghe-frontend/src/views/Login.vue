@@ -59,6 +59,7 @@ const onLogin = async () => {
     }
   } catch (e) {
     errorMsg.value = '登录请求失败';
+    console.error('登录请求失败:', e);
   }
 };
 </script>
