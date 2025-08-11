@@ -1,4 +1,8 @@
 <template>
+  <!--
+    App.vue
+    Vue3 前端应用的根组件，负责全局布局和页面容器。
+  -->
   <div id="app">
     <router-view></router-view>
   </div>

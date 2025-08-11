@@ -1,3 +1,7 @@
+<!--
+HelloWorld.vue
+示例组件，演示 Vue3 组件的基本用法。
+-->
 <script setup>
 import { ref } from 'vue'
 

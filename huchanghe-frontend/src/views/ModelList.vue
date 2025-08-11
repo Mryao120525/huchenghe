@@ -1,3 +1,7 @@
+<!--
+ModelList.vue
+三维模型管理系统的模型列表页，包含筛选、上传、表格展示等功能。
+-->
  
 <template>
   <el-container class="model-system-container">
@@ -8,13 +12,9 @@
     <el-main>
       <!-- 筛选区 -->
       <div class="filter-bar">
-        <el-select placeholder="格式" class="filter-item filter-format" style="width: 90px;">
-          <el-option label="全部" value="all" />
-          <el-option label="OBJ" value="obj" />
-          <el-option label="STL" value="stl" />
-          <el-option label="GLTF" value="gltf" />
-        </el-select>
-        <el-input placeholder="名称" class="filter-item" style="width: 120px;" />
+        <span style="margin-right: 4px;">模型名称：</span>
+        <el-input v-model="filterName" placeholder="名称" class="filter-item" style="width: 120px;" />
+        <span style="margin-right: 4px;">类型：</span>
         <el-select v-model="filterType" placeholder="类型" class="filter-item filter-type" style="width: 120px;">
           <el-option label="全部" value="all" />
           <el-option label="石刻" value="石刻" />
@@ -22,7 +22,6 @@
           <el-option label="雕塑" value="雕塑" />
           <el-option label="造像" value="造像" />
         </el-select>
-        <el-button type="primary" class="filter-item" style="margin-right: 16px;">筛选</el-button>
         <div class="upload-btn" style="display: flex; align-items: center;">
           <el-button type="success" @click="triggerFileInput">上传模型</el-button>
           <input ref="fileInput" type="file" style="display: none;" @change="handleFileUpload" />
@@ -30,7 +29,7 @@
       </div>
       <el-divider />
       <!-- 表格区 -->
-  <el-table :data="filteredTableData" class="model-table" border>
+  <el-table :data="pagedTableData" class="model-table" border>
   <el-table-column prop="id" label="ID" width="100" align="center" header-align="center" />
   <el-table-column prop="name" label="模型名称" width="140" align="center" header-align="center" />
   <el-table-column prop="version" label="版本" width="100" align="center" header-align="center" />
@@ -43,6 +42,19 @@
           </template>
         </el-table-column>
       </el-table>
+      <!-- 分页区 -->
+      <div style="display: flex; justify-content: center; align-items: center; margin: 24px 0 0 0;">
+        <el-pagination
+          background
+          layout="prev, pager, next"
+          :total="filteredTableData.length"
+          :page-size="pageSize"
+          :current-page="currentPage"
+          :pager-count="5"
+          style="--el-pagination-bg-color: #fff;"
+          @current-change="handlePageChange"
+        />
+      </div>
     </el-main>
   </el-container>
 </template>
@@ -55,6 +67,9 @@ const fileInput = ref(null);
 const triggerFileInput = () => {
   if (fileInput.value) fileInput.value.click();
 };
+
+// 名称筛选
+const filterName = ref("");
 // 上传模型文件事件
 const handleFileUpload = (event) => {
   const file = event.target.files[0];
@@ -66,10 +81,34 @@ const handleFileUpload = (event) => {
 
 const router = useRouter();
 const filterType = ref('all');
+
+const pageSize = 10;
+const currentPage = ref(1);
 const filteredTableData = computed(() => {
-  if (filterType.value === 'all') return tableData;
-  return tableData.filter(item => item.type === filterType.value);
+  let data = tableData;
+  // 类型筛选
+  if (filterType.value !== 'all') {
+    data = data.filter(item => item.type === filterType.value);
+  }
+  // 名称筛选（模糊匹配）
+  if (filterName.value.trim() !== '') {
+    data = data.filter(item => item.name.includes(filterName.value.trim()));
+  }
+  return data;
 });
+
+// 当筛选条件变化时，自动跳转回第一页
+import { watch } from 'vue';
+watch([filterType, filterName], () => {
+  currentPage.value = 1;
+});
+const pagedTableData = computed(() => {
+  const start = (currentPage.value - 1) * pageSize;
+  return filteredTableData.value.slice(start, start + pageSize);
+});
+const handlePageChange = (page) => {
+  currentPage.value = page;
+};
 
 // 模拟后端返回的数据
 
@@ -77,7 +116,18 @@ const tableData = reactive([
   { id: 1, name: '战斗机', version: 'v1.0', format: 'OBJ', type: '石刻', path: '/models/plane.obj' },
   { id: 2, name: '装甲车', version: 'v2.1', format: 'STL', type: '雕塑', path: '/models/tank.stl' },
   { id: 3, name: '火箭发射器', version: 'v1.5', format: 'GLTF', type: '石碑', path: '/models/rocket.gltf' },
-  { id: 4, name: '假山', version: 'v1.5', format: 'GLTF', type: '石碑', path: '/models/rocket.gltf' },
+  { id: 4, name: '假山', version: 'v1.5', format: 'GLTF', type: '石碑', path: '/models/rock2.gltf' },
+  { id: 5, name: '佛像', version: 'v2.0', format: 'OBJ', type: '造像', path: '/models/buddha.obj' },
+  { id: 6, name: '狮子雕塑', version: 'v1.2', format: 'STL', type: '雕塑', path: '/models/lion.stl' },
+  { id: 7, name: '石碑A', version: 'v1.0', format: 'GLTF', type: '石碑', path: '/models/steleA.gltf' },
+  { id: 8, name: '石碑B', version: 'v1.1', format: 'OBJ', type: '石碑', path: '/models/steleB.obj' },
+  { id: 9, name: '石刻龙', version: 'v2.3', format: 'STL', type: '石刻', path: '/models/dragon.stl' },
+  { id: 10, name: '石刻虎', version: 'v2.4', format: 'OBJ', type: '石刻', path: '/models/tiger.obj' },
+  { id: 11, name: '石刻凤', version: 'v2.5', format: 'GLTF', type: '石刻', path: '/models/phoenix.gltf' },
+  { id: 12, name: '雕塑A', version: 'v1.0', format: 'OBJ', type: '雕塑', path: '/models/sculptA.obj' },
+  { id: 13, name: '雕塑B', version: 'v1.1', format: 'STL', type: '雕塑', path: '/models/sculptB.stl' },
+  { id: 14, name: '造像A', version: 'v1.0', format: 'GLTF', type: '造像', path: '/models/statueA.gltf' },
+  { id: 15, name: '造像B', version: 'v1.1', format: 'OBJ', type: '造像', path: '/models/statueB.obj' },
 ]);
 
 // 查看详情的点击事件，会跳转到对应的模型详情页
@@ -92,7 +142,10 @@ const handleView = (index, row) => {
   background: #f7f8fa;
 }
 .header-title {
-  background: #545c64;
+  /* 渐变背景动画 */
+  background: linear-gradient(270deg, #4f8cff, #6ee7b7, #fbbf24, #f87171, #4f8cff);
+  background-size: 1000% 100%;
+  animation: gradientMove 8s ease-in-out infinite;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -102,6 +155,18 @@ const handleView = (index, row) => {
   font-weight: bold;
   letter-spacing: 2px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+@keyframes gradientMove {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 .filter-bar {
   display: flex;
