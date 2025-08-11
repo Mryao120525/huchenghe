@@ -25,15 +25,40 @@ Login.vue
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
+import axios from 'axios';
 const router = useRouter();
-const form = ref({ username: '', password: '' });
+// 设置默认手机号和密码
+const form = ref({ username: '12345678912', password: '12345678912' });
 const errorMsg = ref('');
-const onLogin = () => {
-  if (form.value.username === '111' && form.value.password === '000') {
-    errorMsg.value = '';
-    router.push('/models');
-  } else {
-    errorMsg.value = '账号或密码错误';
+
+// 手机号正则：11位数字
+const phoneReg = /^\d{11}$/;
+
+const onLogin = async () => {
+  // 账号校验：11位手机号
+  if (!phoneReg.test(form.value.username)) {
+    errorMsg.value = '账号必须为11位手机号';
+    return;
+  }
+  // 密码校验：1-16位
+  if (!form.value.password || form.value.password.length > 16) {
+    errorMsg.value = '密码不能为空且不超过16位';
+    return;
+  }
+  try {
+    // 调用后端登录接口
+    const res = await axios.post('http://localhost:3000/api/login', {
+      username: form.value.username,
+      password: form.value.password
+    });
+    if (res.data.success) {
+      errorMsg.value = '';
+      router.push('/models');
+    } else {
+      errorMsg.value = res.data.message || '账号或密码错误';
+    }
+  } catch (e) {
+    errorMsg.value = '登录请求失败';
   }
 };
 </script>

@@ -10,6 +10,11 @@ const routes = [
   {
     path: '/',
     name: 'Login',
+    redirect: '/models'
+  },
+  {
+    path: '/login',
+    name: 'LoginPage',
     component: () => import('../views/Login.vue')
   },
   {

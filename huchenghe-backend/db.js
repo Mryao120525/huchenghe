@@ -1,13 +1,18 @@
+// db.js
+// æ•°æ®åº“è¿æ¥ä¸æ“ä½œç›¸å…³ä»£ç ã€‚
 const mysql = require('mysql2');
 
 const pool = mysql.createPool({
   host: 'localhost',
-  user: 'root',         // ¸Ä³ÉÄãµÄÓÃ»§Ãû
-  password: 'Bkc123456', // ¸Ä³ÉÄãµÄÃÜÂë
+  user: 'root',
+  password: 'Bkc123456',
   database: 'huchenghe',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
 });
 
-module.exports = pool;
+// ä½¿ç”¨ Promise å½¢å¼
+const promisePool = pool.promise();
+
+module.exports = promisePool;

@@ -1,75 +1,127 @@
+// modelRoutes.js
+// å®šä¹‰ä¸ä¸‰ç»´æ¨¡å‹ç›¸å…³çš„ API è·¯ç”±ã€‚
 const express = require('express');
 const router = express.Router();
-const mysql = require('mysql2');
+const pool = require('../db');
 
-// Êı¾İ¿âÁ¬½Ó
-const db = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',       // ¸Ä³ÉÄãµÄ MySQL ÓÃ»§Ãû
-    password: '123456', // ¸Ä³ÉÄãµÄ MySQL ÃÜÂë
-    database: 'huchenghe'
-});
-
-db.connect(err => {
-    if (err) {
-        console.error('Êı¾İ¿âÁ¬½ÓÊ§°Ü:', err);
-        return;
-    }
-    console.log('ÒÑ³É¹¦Á¬½Óµ½ MySQL Êı¾İ¿â');
-});
-
-// »ñÈ¡ËùÓĞÄ£ĞÍ
+// è·å–æ‰€æœ‰æ¨¡å‹ï¼ˆæ”¯æŒç­›é€‰å’Œåˆ†é¡µï¼‰
 router.get('/', (req, res) => {
-    db.query('SELECT * FROM models', (err, results) => {
-        if (err) return res.status(500).send('²éÑ¯Ê§°Ü');
-        res.json(results);
-    });
+  const { name, type, page = 1, pageSize = 10 } = req.query;
+  let sql = 'SELECT * FROM models WHERE 1=1';
+  const params = [];
+  
+  // åç§°ç­›é€‰
+  if (name) {
+    sql += ' AND name LIKE ?';
+    params.push(`%${name}%`);
+  }
+  
+  // ç±»å‹ç­›é€‰
+  if (type && type !== 'all') {
+    sql += ' AND type = ?';
+    params.push(type);
+  }
+  
+  // æ·»åŠ åˆ†é¡µ
+  const offset = (page - 1) * pageSize;
+  sql += ' LIMIT ?, ?';
+  params.push(parseInt(offset), parseInt(pageSize));
+  
+  pool.execute(sql, params, (err, results) => {
+    if (err) return res.status(500).json({ message: 'æŸ¥è¯¢å¤±è´¥' });
+    res.json(results);
+  });
 });
 
-// »ñÈ¡µ¥¸öÄ£ĞÍ
+// è·å–æ¨¡å‹æ€»æ•°ï¼ˆç”¨äºåˆ†é¡µï¼‰
+router.get('/count', (req, res) => {
+  const { name, type } = req.query;
+  let sql = 'SELECT COUNT(*) as total FROM models WHERE 1=1';
+  const params = [];
+  
+  // åç§°ç­›é€‰
+  if (name) {
+    sql += ' AND name LIKE ?';
+    params.push(`%${name}%`);
+  }
+  
+  // ç±»å‹ç­›é€‰
+  if (type && type !== 'all') {
+    sql += ' AND type = ?';
+    params.push(type);
+  }
+  
+  pool.execute(sql, params, (err, results) => {
+    if (err) return res.status(500).json({ message: 'æŸ¥è¯¢å¤±è´¥' });
+    res.json(results[0]);
+  });
+});
+
+// è·å–æ¨¡å‹è¯¦æƒ…
 router.get('/:id', (req, res) => {
-    const { id } = req.params;
-    db.query('SELECT * FROM models WHERE id = ?', [id], (err, results) => {
-        if (err) return res.status(500).send('²éÑ¯Ê§°Ü');
-        if (results.length === 0) return res.status(404).send('Î´ÕÒµ½Ä£ĞÍ');
-        res.json(results[0]);
-    });
+  const { id } = req.params;
+  pool.execute('SELECT * FROM models WHERE id = ?', [id], (err, results) => {
+    if (err) return res.status(500).json({ message: 'æŸ¥è¯¢å¤±è´¥' });
+    if (results.length === 0) return res.status(404).json({ message: 'æœªæ‰¾åˆ°æ¨¡å‹' });
+    res.json(results[0]);
+  });
 });
 
-// ĞÂÔöÄ£ĞÍ
+// ä¸Šä¼ æ¨¡å‹
 router.post('/', (req, res) => {
-    const { main_address, area, code, name, category, quantity, image, remark, server_path, render_image } = req.body;
-    const sql = `
-        INSERT INTO models (main_address, area, code, name, category, quantity, image, remark, server_path, render_image)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
-    db.query(sql, [main_address, area, code, name, category, quantity, image, remark, server_path, render_image], (err, result) => {
-        if (err) return res.status(500).send('²åÈëÊ§°Ü');
-        res.json({ message: 'ĞÂÔö³É¹¦', id: result.insertId });
-    });
+  const { name, version, format, type, path, uploader } = req.body;
+  
+  // éªŒè¯å¿…å¡«å­—æ®µ
+  if (!name || !version || !format || !type || !path) {
+    return res.status(400).json({ message: 'ç¼ºå°‘å¿…è¦å­—æ®µ' });
+  }
+  
+  const uploadTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  
+  pool.execute(
+    'INSERT INTO models (name, version, format, type, path, uploader, uploadTime) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    [name, version, format, type, path, uploader || 'æœªçŸ¥ç”¨æˆ·', uploadTime],
+    (err, results) => {
+      if (err) return res.status(500).json({ message: 'ä¸Šä¼ å¤±è´¥' });
+      res.json({ message: 'æ¨¡å‹ä¸Šä¼ æˆåŠŸ', modelId: results.insertId });
+    }
+  );
 });
 
-// ¸üĞÂÄ£ĞÍ
+// æ›´æ–°æ¨¡å‹
 router.put('/:id', (req, res) => {
-    const { id } = req.params;
-    const { main_address, area, code, name, category, quantity, image, remark, server_path, render_image } = req.body;
-    const sql = `
-        UPDATE models SET main_address=?, area=?, code=?, name=?, category=?, quantity=?, image=?, remark=?, server_path=?, render_image=?
-        WHERE id=?
-    `;
-    db.query(sql, [main_address, area, code, name, category, quantity, image, remark, server_path, render_image, id], (err, result) => {
-        if (err) return res.status(500).send('¸üĞÂÊ§°Ü');
-        res.json({ message: '¸üĞÂ³É¹¦' });
-    });
+  const { id } = req.params;
+  const { name, version, format, type, path } = req.body;
+  
+  // éªŒè¯å¿…å¡«å­—æ®µ
+  if (!name || !version || !format || !type || !path) {
+    return res.status(400).json({ message: 'ç¼ºå°‘å¿…è¦å­—æ®µ' });
+  }
+  
+  pool.execute(
+    'UPDATE models SET name = ?, version = ?, format = ?, type = ?, path = ? WHERE id = ?',
+    [name, version, format, type, path, id],
+    (err, results) => {
+      if (err) return res.status(500).json({ message: 'æ›´æ–°å¤±è´¥' });
+      if (results.affectedRows === 0) {
+        return res.status(404).json({ message: 'æ¨¡å‹ä¸å­˜åœ¨' });
+      }
+      res.json({ message: 'æ¨¡å‹æ›´æ–°æˆåŠŸ' });
+    }
+  );
 });
 
-// É¾³ıÄ£ĞÍ
+// åˆ é™¤æ¨¡å‹
 router.delete('/:id', (req, res) => {
-    const { id } = req.params;
-    db.query('DELETE FROM models WHERE id = ?', [id], (err, result) => {
-        if (err) return res.status(500).send('É¾³ıÊ§°Ü');
-        res.json({ message: 'É¾³ı³É¹¦' });
-    });
+  const { id } = req.params;
+  
+  pool.execute('DELETE FROM models WHERE id = ?', [id], (err, results) => {
+    if (err) return res.status(500).json({ message: 'åˆ é™¤å¤±è´¥' });
+    if (results.affectedRows === 0) {
+      return res.status(404).json({ message: 'æ¨¡å‹ä¸å­˜åœ¨' });
+    }
+    res.json({ message: 'æ¨¡å‹åˆ é™¤æˆåŠŸ' });
+  });
 });
 
 module.exports = router;

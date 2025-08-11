@@ -68,6 +68,7 @@ ModelDetail.vue
 <script setup>
 import { computed, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import { ref } from 'vue';
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
@@ -79,7 +80,7 @@ const route = useRoute();
 
 // 返回模型列表
 const goBack = () => {
-  router.push('/models');
+  router.go(-1);
 };
 
 // 本地模拟模型数据，与列表页字段一一对应
@@ -108,7 +109,6 @@ const modelDetail = computed(() => {
 
 
 let renderer, scene, camera, animationId, controls;
-import { ref } from 'vue';
 let loadedModel = ref(null);
 let transformControls = null;
 
