@@ -1,5 +1,35 @@
-// index.js
-// 项目后端服务主入口文件，用于初始化和启动Express应用服务器
+/*
+  index.js
+  项目后端服务主入口文件，用于初始化和启动Express应用服务器
+
+  ## 功能描述
+  这是后端服务的主入口文件，负责初始化 Express 应用服务器，
+  配置中间件，注册路由，并启动服务监听指定端口。
+
+  ## 依赖模块说明
+  ### 核心依赖
+  - express: Node.js Web 应用框架，用于构建 RESTful API
+  - cors: 处理跨域资源共享的中间件
+  - body-parser: 解析 HTTP 请求体数据的中间件
+
+  ### 内部模块
+  - [modelRoutes](file:///e:/Project/huchenghe/huchenghe-backend/routes/modelRoutes.js): 模型相关 API 路由模块
+  - [loginRoutes](file:///e:/Project/huchenghe/huchenghe-backend/routes/loginRoutes.js): 登录相关 API 路由模块
+
+  ## 中间件配置
+  1. cors(): 启用跨域资源共享，允许前端应用访问后端 API
+  2. bodyParser.json(): 解析 JSON 格式的请求体数据
+  3. bodyParser.urlencoded({ extended: true }): 解析 URL 编码的请求体数据
+
+  ## 路由注册
+  - `/api/models`: 挂载模型相关 API 路由
+  - `/api`: 挂载登录相关 API 路由
+
+  ## 服务配置
+  - 默认监听端口: 3000
+  - 启动成功后输出服务运行地址
+  - 包含错误处理机制，服务启动失败时输出错误信息
+*/
 
 // 引入所需的核心依赖模块
 const express = require('express');           // Express框架，用于构建Web应用
