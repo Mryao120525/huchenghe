@@ -98,8 +98,8 @@ node index.js
 const pool = mysql.createPool({
   host: 'localhost',        // 数据库主机地址
   user: 'root',             // 数据库用户名
-  password: 'Bkc123456',    // 数据库密码
-  database: 'huchenghe',    // 数据库名称
+  password: '***',    // 数据库密码
+  database: '*****',    // 数据库名称
   waitForConnections: true, // 是否等待连接
   connectionLimit: 10,      // 连接池最大连接数
   queueLimit: 0             // 排队等待连接的最大请求数
