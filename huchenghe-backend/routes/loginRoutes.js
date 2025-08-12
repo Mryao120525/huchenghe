@@ -57,6 +57,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
+const bcrypt = require('bcryptjs');
 
 /**
  * 用户登录接口
@@ -66,31 +67,52 @@ const pool = require('../db');
  * @returns {Object} { success: boolean, message: string, user: Object }
  * @throws {500} 数据库错误
  */
-router.post('/login', (req, res) => {
-  const { username, password } = req.body;
-  console.log('收到登录请求:', { username, password });
-  
-  if (!username || !password) {
-    console.log('登录验证失败: 账号或密码为空');
-    return res.json({ success: false, message: '账号和密码不能为空' });
-  }
-  pool.execute(
-    'SELECT * FROM user WHERE phone = ? AND password = ?',
-    [username, password],
-    (err, results) => {
-      if (err) {
-        console.error('登录查询失败:', err);
-        return res.json({ success: false, message: '数据库错误' });
-      }
-      if (results.length > 0) {
-        console.log('登录成功:', results[0].id);
-        res.json({ success: true, message: '登录成功', user: results[0] });
-      } else {
-        console.log('登录失败: 账号或密码错误');
-        res.json({ success: false, message: '账号或密码错误' });
-      }
+router.post('/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    console.log('收到登录请求:', { username });
+
+    if (!username || !password) {
+      console.log('登录验证失败: 账号或密码为空');
+      return res.json({ success: false, message: '账号和密码不能为空' });
     }
-  );
+
+    // 先按手机号查用户
+    const [rows] = await pool.execute('SELECT id, username, phone, role, email, password FROM user WHERE phone = ? LIMIT 1', [username]);
+
+    if (!rows || rows.length === 0) {
+      console.log('登录失败: 用户不存在');
+      return res.json({ success: false, message: '账号或密码错误' });
+    }
+
+    const user = rows[0];
+    const dbHash = user.password || '';
+
+    let ok = false;
+    // 优先尝试 bcrypt 校验
+    try {
+      if (dbHash && dbHash.startsWith('$2')) {
+        ok = await bcrypt.compare(password, dbHash);
+      }
+    } catch {}
+    // 兼容历史明文
+    if (!ok) {
+      ok = password === dbHash;
+    }
+
+    if (!ok) {
+      console.log('登录失败: 密码不匹配');
+      return res.json({ success: false, message: '账号或密码错误' });
+    }
+
+    // 登录成功，去除敏感字段
+    const { password: _, ...safeUser } = user;
+    console.log('登录成功:', safeUser.id);
+    return res.json({ success: true, message: '登录成功', user: safeUser });
+  } catch (err) {
+    console.error('登录查询失败:', err);
+    return res.json({ success: false, message: '数据库错误' });
+  }
 });
 
 /**

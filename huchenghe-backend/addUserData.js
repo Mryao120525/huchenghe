@@ -30,41 +30,41 @@ async function createUserTable() {
   }
 }
 
-// 添加默认用户的函数
+// 添加默认用户的函数（批量）
 async function addDefaultUser() {
   try {
-    // 默认管理员账户信息
-    const defaultUser = {
-      username: 'admin',
-      phone: '12345678912',
-      password: '12345678912',
-      role: 'admin',
-      email: 'admin@example.com'
-    };
-    
-    // 检查用户是否已存在
-    const [existingUsers] = await pool.execute(
-      'SELECT id FROM user WHERE phone = ?',
-      [defaultUser.phone]
-    );
-    
-    if (existingUsers.length > 0) {
-      console.log('默认管理员账户已存在，跳过创建');
-      return;
+    // 统一默认密码（明文），便于测试
+    const defaultPassword = '123456';
+    // 默认账户列表（可继续扩展）
+    const users = [
+      {
+        username: 'admin',
+        phone: '12345678912',
+        password: defaultPassword,
+        role: 'admin',
+        email: 'admin@example.com'
+      },
+      {
+        username: 'testuser',
+        phone: '13800000000',
+        password: defaultPassword,
+        role: 'user',
+        email: 'testuser@example.com'
+      }
+    ];
+
+    for (const u of users) {
+      const [exist] = await pool.execute('SELECT id FROM user WHERE phone = ?', [u.phone]);
+      if (exist.length > 0) {
+        console.log(`账户已存在，跳过: ${u.username} (${u.phone})`);
+        continue;
+      }
+      const [result] = await pool.execute(
+        'INSERT INTO user (username, phone, password, role, email) VALUES (?, ?, ?, ?, ?)',
+        [u.username, u.phone, u.password, u.role, u.email]
+      );
+      console.log(`账户创建成功: ${u.username} (${u.phone})，新ID=${result.insertId}`);
     }
-    
-    // 插入默认管理员账户
-    const [result] = await pool.execute(
-      'INSERT INTO user (username, phone, password, role, email) VALUES (?, ?, ?, ?, ?)',
-      [defaultUser.username, defaultUser.phone, defaultUser.password, defaultUser.role, defaultUser.email]
-    );
-    
-    console.log('默认管理员账户添加成功!');
-    console.log('用户ID:', result.insertId);
-    
-    // 查询并显示刚刚插入的用户数据
-    const [rows] = await pool.execute('SELECT * FROM user WHERE id = ?', [result.insertId]);
-    console.log('插入的用户数据:', rows[0]);
   } catch (error) {
     console.error('添加默认用户时出错:', error);
     throw error;

@@ -14,7 +14,7 @@ Login.vue
           <el-input v-model="form.password" placeholder="请输入密码" show-password clearable />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" class="login-btn" @click="onLogin" style="width: 100%;">登录</el-button>
+          <el-button :loading="loading" type="primary" class="login-btn" @click="onLogin" style="width: 100%;">登录</el-button>
         </el-form-item>
         <div v-if="errorMsg" class="login-error">{{ errorMsg }}</div>
       </el-form>
@@ -25,34 +25,29 @@ Login.vue
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import axios from 'axios';
+import { authAPI } from '../api/index.js';
 const router = useRouter();
-// 设置默认手机号和密码
-const form = ref({ username: '12345678912', password: '12345678912' });
+// 设置默认手机号和密码（可改为空串以防泄露测试账号）
+const form = ref({ username: '', password: '' });
 const errorMsg = ref('');
-
-// 手机号正则：11位数字
-const phoneReg = /^\d{11}$/;
+const loading = ref(false);
 
 const onLogin = async () => {
-  // 账号校验：11位手机号
-  if (!phoneReg.test(form.value.username)) {
-    errorMsg.value = '账号必须为11位手机号';
-    return;
-  }
-  // 密码校验：1-16位
-  if (!form.value.password || form.value.password.length > 16) {
-    errorMsg.value = '密码不能为空且不超过16位';
+  // 基础必填校验
+  if (!form.value.username || !form.value.password) {
+    errorMsg.value = '请输入账号和密码';
     return;
   }
   try {
+    loading.value = true;
     // 调用后端登录接口
-    const res = await axios.post('http://localhost:3000/api/login', {
+    const res = await authAPI.login({
       username: form.value.username,
       password: form.value.password
     });
     if (res.data.success) {
       errorMsg.value = '';
+      localStorage.setItem('hc_authed', '1');
       router.push('/models');
     } else {
       errorMsg.value = res.data.message || '账号或密码错误';
@@ -60,6 +55,8 @@ const onLogin = async () => {
   } catch (e) {
     errorMsg.value = '登录请求失败';
     console.error('登录请求失败:', e);
+  } finally {
+    loading.value = false;
   }
 };
 </script>

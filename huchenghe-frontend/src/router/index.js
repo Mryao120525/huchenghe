@@ -32,8 +32,8 @@ import Admin from '../views/Admin.vue';
 const routes = [
   {
     path: '/',
-    name: 'Login',
-    redirect: '/models'
+    name: 'Root',
+    redirect: '/login'
   },
   {
     path: '/login',
@@ -43,24 +43,28 @@ const routes = [
   {
     path: '/models',
     name: 'ModelList',
-    component: ModelList
+    component: ModelList,
+    meta: { requiresAuth: true }
   },
   {
     path: '/model/:id',
     name: 'ModelDetail',
-    component: ModelDetail
+    component: ModelDetail,
+    meta: { requiresAuth: true }
   },
   // 先写更具体的子路由
   {
     path: '/admin/用户管理',
     name: 'UserAdmin',
-    component: () => import('../views/UserAdmin.vue')
+    component: () => import('../views/UserAdmin.vue'),
+    meta: { requiresAuth: true }
   },
   // 再写父级路由
   {
     path: '/admin',
     name: 'Admin',
-    component: Admin
+    component: Admin,
+    meta: { requiresAuth: true }
   },
   // 测试连接页面
   {
@@ -73,6 +77,18 @@ const routes = [
 const router = createRouter({
   history: createWebHashHistory(),
   routes
+});
+
+// 简易路由守卫：基于 localStorage 标记是否登录
+router.beforeEach((to, from, next) => {
+  const isAuthed = !!localStorage.getItem('hc_authed');
+  if (to.meta && to.meta.requiresAuth && !isAuthed) {
+    next('/login');
+  } else if (to.path === '/login' && isAuthed) {
+    next('/models');
+  } else {
+    next();
+  }
 });
 
 export default router;
