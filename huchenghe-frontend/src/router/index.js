@@ -61,6 +61,12 @@ const routes = [
     path: '/admin',
     name: 'Admin',
     component: Admin
+  },
+  // 测试连接页面
+  {
+    path: '/test-connection',
+    name: 'TestConnection',
+    component: () => import('../views/TestConnection.vue')
   }
 ];
 

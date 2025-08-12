@@ -157,66 +157,84 @@ router.post('/add-sample', async (req, res) => {
 });
 
 // 获取所有模型（支持筛选和分页）
-router.get('/', (req, res) => {
-  const { name, type, page = 1, pageSize = 10 } = req.query;
-  let sql = 'SELECT * FROM models WHERE 1=1';
-  const params = [];
-  
-  // 名称筛选
-  if (name) {
-    sql += ' AND name LIKE ?';
-    params.push(`%${name}%`);
-  }
-  
-  // 类别筛选
-  if (type && type !== 'all') {
-    sql += ' AND category = ?';
-    params.push(type);
-  }
-  
-  // 添加分页
-  const offset = (page - 1) * pageSize;
-  sql += ' LIMIT ?, ?';
-  params.push(parseInt(offset), parseInt(pageSize));
-  
-  pool.execute(sql, params, (err, results) => {
-    if (err) return res.status(500).json({ message: '查询失败' });
+router.get('/', async (req, res) => {
+  try {
+    const { name, type, page = 1, pageSize = 10 } = req.query;
+    // 简化分页参数处理
+    const parsedPage = parseInt(page, 10) || 1;
+    const parsedPageSize = parseInt(pageSize, 10) || 10;
+    const offset = (parsedPage - 1) * parsedPageSize;
+    // 最终参数验证
+    if (!Number.isInteger(parsedPage) || !Number.isInteger(parsedPageSize) || parsedPage < 1 || parsedPageSize < 1) {
+      throw new Error('分页参数必须为正整数');
+    }
+    let sql = 'SELECT * FROM models WHERE 1=1';
+    const params = [];
+    
+    // 名称筛选
+    if (name) {
+      sql += ' AND name LIKE ?';
+      params.push(`%${name}%`);
+    }
+    
+    // 类别筛选
+    if (type && type !== 'all') {
+      sql += ' AND category = ?';
+      params.push(type);
+    }
+    
+    // 添加分页
+    sql += ' LIMIT ?, ?';
+    // 确保offset和parsedPageSize是整数类型
+    params.push(parseInt(offset), parseInt(parsedPageSize));
+    const [results] = await pool.execute(sql, params);
     res.json(results);
-  });
+  } catch (err) {
+    console.error('模型查询失败:', err);
+    res.status(500).json({ message: '查询失败', error: err.message });
+  }
 });
 
 // 获取模型总数（用于分页）
-router.get('/count', (req, res) => {
-  const { name, type } = req.query;
-  let sql = 'SELECT COUNT(*) as total FROM models WHERE 1=1';
-  const params = [];
-  
-  // 名称筛选
-  if (name) {
-    sql += ' AND name LIKE ?';
-    params.push(`%${name}%`);
-  }
-  
-  // 类别筛选
-  if (type && type !== 'all') {
-    sql += ' AND category = ?';
-    params.push(type);
-  }
-  
-  pool.execute(sql, params, (err, results) => {
-    if (err) return res.status(500).json({ message: '查询失败' });
+router.get('/count', async (req, res) => {
+  try {
+    const { name, type } = req.query;
+    let sql = 'SELECT COUNT(*) as total FROM models WHERE 1=1';
+    const params = [];
+    
+    // 名称筛选
+    if (name) {
+      sql += ' AND name LIKE ?';
+      params.push(`%${name}%`);
+    }
+    
+    // 类别筛选
+    if (type && type !== 'all') {
+      sql += ' AND category = ?';
+      params.push(type);
+    }
+    
+    const [results] = await pool.execute(sql, params);
     res.json(results[0]);
-  });
+  } catch (err) {
+    console.error('模型总数查询失败:', err);
+    res.status(500).json({ message: '查询失败', error: err.message });
+  }
 });
 
 // 获取模型详情
-router.get('/:id', (req, res) => {
-  const { id } = req.params;
-  pool.execute('SELECT * FROM models WHERE id = ?', [id], (err, results) => {
-    if (err) return res.status(500).json({ message: '查询失败' });
-    if (results.length === 0) return res.status(404).json({ message: '未找到模型' });
+router.get('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [results] = await pool.execute('SELECT * FROM models WHERE id = ?', [id]);
+    if (results.length === 0) {
+      return res.status(404).json({ message: '未找到模型' });
+    }
     res.json(results[0]);
-  });
+  } catch (err) {
+    console.error('模型详情查询失败:', err);
+    res.status(500).json({ message: '查询失败', error: err.message });
+  }
 });
 
 // 上传模型文件
@@ -260,15 +278,15 @@ router.post('/upload', upload.single('modelFile'), async (req, res) => {
     }
     
     console.log('存储路径:', filePath);
-    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const now = Date.now(); // 使用时间戳
     const createTime = now;
     const updateTime = now;
-    
+
     console.log('准备插入数据库');
     // 插入数据库记录
     const [result] = await pool.execute(
-      'INSERT INTO models (name, category, area, address, quantity, imagePath, renderPath, modelPath, remark, createTime, updateTime) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [name, category, area, address, quantity, imagePath, renderPath, filePath, remark || '', createTime, updateTime]
+      'INSERT INTO models (name, category, area, address, quantity, imagePath, renderPath, modelPath, remark, createTime, updateTime, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [name, category, area, address, quantity, imagePath, renderPath, filePath, remark || '', createTime, updateTime, 1] // 添加初始版本号1
     );
     
     console.log('数据库插入成功，ID:', result.insertId);
@@ -284,39 +302,51 @@ router.post('/upload', upload.single('modelFile'), async (req, res) => {
 });
 
 // 更新模型
-router.put('/:id', (req, res) => {
-  const { id } = req.params;
-  const { name, category, area, address, quantity, imagePath, renderPath, modelPath, remark, createTime, updateTime } = req.body;
-  
-  // 验证必填字段
-  if (!name || !category || !area || !address || !quantity || !imagePath || !renderPath || !modelPath || !createTime || !updateTime) {
-    return res.status(400).json({ message: '缺少必要字段' });
-  }
-  
-  pool.execute(
-    'UPDATE models SET name = ?, category = ?, area = ?, address = ?, quantity = ?, imagePath = ?, renderPath = ?, modelPath = ?, remark = ?, createTime = ?, updateTime = ? WHERE id = ?',
-    [name, category, area, address, quantity, imagePath, renderPath, modelPath, remark || '', createTime, updateTime, id],
-    (err, results) => {
-      if (err) return res.status(500).json({ message: '更新失败' });
-      if (results.affectedRows === 0) {
-        return res.status(404).json({ message: '模型不存在' });
-      }
-      res.json({ message: '模型更新成功' });
+router.put('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, category, area, address, quantity, imagePath, renderPath, modelPath, remark, createTime } = req.body;
+
+    // 验证必填字段
+    if (!name || !category || !area || !address || !quantity || !imagePath || !renderPath || !modelPath || !createTime) {
+      return res.status(400).json({ message: '缺少必要字段' });
     }
-  );
+
+    // 查询当前版本号
+    const [modelResult] = await pool.execute('SELECT version FROM models WHERE id = ?', [id]);
+    if (modelResult.length === 0) {
+      return res.status(404).json({ message: '模型不存在' });
+    }
+    const currentVersion = modelResult[0].version || 1;
+    const newVersion = currentVersion + 1;
+    const updateTime = Date.now(); // 更新时间戳
+
+    // 更新模型信息
+    await pool.execute(
+      'UPDATE models SET name = ?, category = ?, area = ?, address = ?, quantity = ?, imagePath = ?, renderPath = ?, modelPath = ?, remark = ?, createTime = ?, updateTime = ?, version = ? WHERE id = ?',
+      [name, category, area, address, quantity, imagePath, renderPath, modelPath, remark || '', createTime, updateTime, newVersion, id]
+    );
+
+    res.json({ message: '模型更新成功', version: newVersion });
+  } catch (error) {
+    console.error('更新模型失败:', error);
+    res.status(500).json({ message: '更新失败', error: error.message });
+  }
 });
 
 // 删除模型
-router.delete('/:id', (req, res) => {
-  const { id } = req.params;
-  
-  pool.execute('DELETE FROM models WHERE id = ?', [id], (err, results) => {
-    if (err) return res.status(500).json({ message: '删除失败' });
+router.delete('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [results] = await pool.execute('DELETE FROM models WHERE id = ?', [id]);
     if (results.affectedRows === 0) {
       return res.status(404).json({ message: '模型不存在' });
     }
     res.json({ message: '模型删除成功' });
-  });
+  } catch (err) {
+    console.error('模型删除失败:', err);
+    res.status(500).json({ message: '删除失败', error: err.message });
+  }
 });
 
 module.exports = router;

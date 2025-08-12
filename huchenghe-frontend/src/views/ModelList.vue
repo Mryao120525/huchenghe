@@ -87,7 +87,7 @@ ModelList.vue
   <el-table-column prop="area" label="区域" width="80" align="center" header-align="center" />
   <el-table-column prop="address" label="主址" width="120" align="center" header-align="center" />
   <el-table-column prop="quantity" label="数量" width="60" align="center" header-align="center" />
-    <el-table-column prop="imagePath" label="图片路径" min-width="150" align="center" header-align="center" />
+  <el-table-column prop="imagePath" label="图片路径" min-width="150" align="center" header-align="center" />
   <el-table-column label="操作" width="120" align="center" header-align="center">
           <template #default="scope">
             <el-button size="small" @click="handleView(scope.$index, scope.row)">详情</el-button>
