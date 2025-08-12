@@ -9,9 +9,10 @@
       ref="formRef"
       :model="form"
       :rules="rules"
-      label-width="100px"
+    label-width="120px"
     >
-      <el-form-item label="名称" prop="name">
+
+<el-form-item label="模型名称" prop="name">
         <el-input v-model="form.name" />
       </el-form-item>
       
@@ -53,23 +54,7 @@
         <el-input v-model="form.remark" type="textarea" />
       </el-form-item>
       
-      <el-form-item label="创建时间" prop="createTime">
-        <el-date-picker 
-          v-model="form.createTime" 
-          type="datetime" 
-          placeholder="选择日期时间"
-          style="width: 100%"
-        />
-      </el-form-item>
-      
-      <el-form-item label="更新时间" prop="updateTime">
-        <el-date-picker 
-          v-model="form.updateTime" 
-          type="datetime" 
-          placeholder="选择日期时间"
-          style="width: 100%"
-        />
-      </el-form-item>
+
     </el-form>
     
     <template #footer>
@@ -82,7 +67,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, defineProps, defineEmits, watch } from 'vue';
+import { ref, reactive, defineProps, defineEmits, watch, computed } from 'vue';
 import { ElMessage } from 'element-plus';
 
 const props = defineProps({
@@ -98,28 +83,43 @@ const props = defineProps({
 
 const emit = defineEmits(['update:visible', 'confirm']);
 
-const dialogVisible = ref(false);
+// 将dialogVisible从ref改为computed双向绑定
+const dialogVisible = computed({
+  get() {
+    return props.visible;
+  },
+  set(value) {
+    emit('update:visible', value);
+  }
+});
 const formRef = ref();
 
-// 表单数据
+// 表单数据 - 移除初始路径赋值，统一在初始化时设置
 const form = reactive({
   name: '',
   category: '其他',
   area: '',
   address: '',
   quantity: 1,
+  modelPath: '',
   imagePath: '',
   renderPath: '',
-  modelPath: '',
   remark: '',
-  createTime: '',
-  updateTime: ''
 });
 
 // 表单验证规则
 const rules = {
+  modelPath: [
+    { required: true, message: '请输入模型存储路径', trigger: 'blur' }
+  ],
+  imagePath: [
+    { required: true, message: '请输入图片路径', trigger: 'blur' }
+  ],
+  renderPath: [
+    { required: true, message: '请输入渲染图路径', trigger: 'blur' }
+  ],
   name: [
-    { required: true, message: '请输入名称', trigger: 'blur' }
+    { required: true, message: '请输入模型名称', trigger: 'blur' }
   ],
   category: [
     { required: true, message: '请选择类别', trigger: 'change' }
@@ -142,17 +142,11 @@ const rules = {
   modelPath: [
     { required: true, message: '请输入模型存储路径', trigger: 'blur' }
   ],
-  createTime: [
-    { required: true, message: '请选择创建时间', trigger: 'change' }
-  ],
-  updateTime: [
-    { required: true, message: '请选择更新时间', trigger: 'change' }
-  ]
+
 };
 
-// 监听visible属性变化
-watch(() => props.visible, (newVal) => {
-  dialogVisible.value = newVal;
+// 监听dialogVisible变化(原为监听props.visible)
+watch(dialogVisible, (newVal) => {
   if (newVal) {
     // 初始化表单数据
     form.name = props.fileName.replace(/\.[^/.]+$/, ""); // 去掉文件扩展名
@@ -171,8 +165,15 @@ watch(() => props.visible, (newVal) => {
 
 // 关闭弹窗
 const handleClose = () => {
-  dialogVisible.value = false;
+  // 重置表单验证状态
+  if (formRef.value) {
+    formRef.value.resetFields();
+  }
+  // 通知父组件关闭
   emit('update:visible', false);
+  // 清除日期字段（如果不需要可删除）
+  delete form.createTime;
+  delete form.updateTime;
 };
 
 // 提交表单

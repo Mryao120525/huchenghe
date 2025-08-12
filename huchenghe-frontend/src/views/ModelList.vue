@@ -120,7 +120,11 @@ import ModelUploadDialog from '../components/ModelUploadDialog.vue';
 
 const fileInput = ref(null);
 const triggerFileInput = () => {
-  if (fileInput.value) fileInput.value.click();
+  // 确保先重置状态再触发点击
+  if (fileInput.value) {
+    fileInput.value.value = null;
+    fileInput.value.click();
+  }
 };
 
 // 控制弹窗显示
@@ -139,6 +143,8 @@ const handleFileUpload = (event) => {
     fileName.value = file.name;
     // 显示信息填写弹窗
     uploadDialogVisible.value = true;
+    // 重置文件输入元素值，允许重复选择相同文件
+    event.target.value = null;
   }
 };
 
@@ -167,12 +173,27 @@ const handleUploadConfirm = async (modelInfo) => {
     
     // 重新加载数据
     fetchData();
+    
+    // 上传成功后重置状态
+    resetUploadState();
   } catch (error) {
     console.error('文件上传失败:', error);
     ElMessage.error(`文件上传失败: ${error.message}`);
+    // 上传失败也重置状态
+    resetUploadState();
   }
 };
 
+// 添加重置上传状态的方法
+const resetUploadState = () => {
+  uploadDialogVisible.value = false;
+  selectedFile.value = null;
+  fileName.value = '';
+  // 重置文件输入元素
+  if (fileInput.value) {
+    fileInput.value.value = null;
+  }
+};
 const router = useRouter();
 const filterType = ref('all');
 

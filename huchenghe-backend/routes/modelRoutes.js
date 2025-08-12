@@ -186,7 +186,7 @@ router.get('/', async (req, res) => {
     // 添加分页
     sql += ' LIMIT ?, ?';
     // 确保offset和parsedPageSize是整数类型
-    params.push(parseInt(offset), parseInt(parsedPageSize));
+    params.push(offset, parsedPageSize);
     const [results] = await pool.execute(sql, params);
     res.json(results);
   } catch (err) {
@@ -251,7 +251,7 @@ router.post('/upload', upload.single('modelFile'), async (req, res) => {
     }
     
     // 获取表单数据
-    const { name, category, area, address, quantity, imagePath, renderPath, remark } = req.body;
+    const { name, category, area, address, quantity, imagePath, renderPath, modelPath, remark } = req.body;
     console.log('表单数据:', { name, category, area, address, quantity, imagePath, renderPath, modelPath, remark });
     
     // 验证必填字段
