@@ -1,3 +1,42 @@
+/**
+ * 数据库连接池模块
+ * @module db
+ * @description 提供MySQL数据库连接池功能，使用Promise API进行异步操作
+ * @author 系统自动生成
+ * @version 1.0.0
+ */
+
+/**
+ * MySQL数据库连接池配置
+ * @typedef {Object} PoolConfig
+ * @property {string} host - 数据库主机地址
+ * @property {string} user - 数据库用户名
+ * @property {string} password - 数据库密码
+ * @property {string} database - 数据库名称
+ * @property {boolean} waitForConnections - 无可用连接时是否等待
+ * @property {number} connectionLimit - 连接池最大连接数
+ * @property {number} queueLimit - 排队等待连接的最大请求数(0表示无限制)
+ */
+
+/**
+ * 创建并配置MySQL连接池
+ * @type {mysql2.Pool}
+ * @see {@link https://github.com/sidorares/node-mysql2|mysql2文档}了解更多连接池配置选项
+ */
+
+/**
+ * Promise风格的数据库连接池对象
+ * 提供execute方法用于执行SQL查询
+ * @type {mysql2.PromisePool}
+ * @example
+ * // 使用示例
+ * const db = require('./db');
+ * async function getUser(id) {
+ *   const [rows] = await db.execute('SELECT * FROM users WHERE id = ?', [id]);
+ *   return rows[0];
+ * }
+ */
+
 /*
   db.js
   数据库连接与操作相关代码。

@@ -128,22 +128,25 @@ const upload = multer({
 router.post('/add-sample', async (req, res) => {
   try {
     // 插入示例数据
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
     const sampleModel = {
       name: '示例模型',
-      version: 'v1.0',
-      format: 'OBJ',
-      type: '雕塑',
-      path: '/models/sample.obj',
-      uploader: '系统管理员'
+      category: '雕塑',
+      area: 'A区',
+      address: '一楼展厅',
+      quantity: 1,
+      imagePath: '/images/sample.jpg',
+      renderPath: '/renders/sample.png',
+      modelPath: '/models/sample.obj',
+      remark: '这是一个示例模型',
+      createTime: now,
+      updateTime: now
     };
-    
-    // 使用当前时间作为上传时间
-    const uploadTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
     
     // 执行插入操作
     const [result] = await pool.execute(
-      'INSERT INTO models (name, version, format, type, path, uploader, uploadTime) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [sampleModel.name, sampleModel.version, sampleModel.format, sampleModel.type, sampleModel.path, sampleModel.uploader, uploadTime]
+      'INSERT INTO models (name, category, area, address, quantity, imagePath, renderPath, modelPath, remark, createTime, updateTime) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [sampleModel.name, sampleModel.category, sampleModel.area, sampleModel.address, sampleModel.quantity, sampleModel.imagePath, sampleModel.renderPath, sampleModel.modelPath, sampleModel.remark, sampleModel.createTime, sampleModel.updateTime]
     );
     
     res.json({ message: '示例数据添加成功', modelId: result.insertId });
@@ -165,9 +168,9 @@ router.get('/', (req, res) => {
     params.push(`%${name}%`);
   }
   
-  // 类型筛选
+  // 类别筛选
   if (type && type !== 'all') {
-    sql += ' AND type = ?';
+    sql += ' AND category = ?';
     params.push(type);
   }
   
@@ -194,9 +197,9 @@ router.get('/count', (req, res) => {
     params.push(`%${name}%`);
   }
   
-  // 类型筛选
+  // 类别筛选
   if (type && type !== 'all') {
-    sql += ' AND type = ?';
+    sql += ' AND category = ?';
     params.push(type);
   }
   
@@ -230,11 +233,11 @@ router.post('/upload', upload.single('modelFile'), async (req, res) => {
     }
     
     // 获取表单数据
-    const { name, version, type, uploader } = req.body;
-    console.log('表单数据:', { name, version, type, uploader });
+    const { name, category, area, address, quantity, imagePath, renderPath, remark } = req.body;
+    console.log('表单数据:', { name, category, area, address, quantity, imagePath, renderPath, modelPath, remark });
     
     // 验证必填字段
-    if (!name || !version || !type) {
+    if (!name || !category || !area || !address || !quantity || !imagePath || !renderPath || !modelPath) {
       console.log('缺少必要字段');
       return res.status(400).json({ message: '缺少必要字段' });
     }
@@ -257,14 +260,15 @@ router.post('/upload', upload.single('modelFile'), async (req, res) => {
     }
     
     console.log('存储路径:', filePath);
-    const uploadTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
-    const uploaderName = uploader || '未知用户';
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const createTime = now;
+    const updateTime = now;
     
     console.log('准备插入数据库');
     // 插入数据库记录
     const [result] = await pool.execute(
-      'INSERT INTO models (name, version, format, type, path, uploader, uploadTime) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [name, version, format, type, filePath, uploaderName, uploadTime]
+      'INSERT INTO models (name, category, area, address, quantity, imagePath, renderPath, modelPath, remark, createTime, updateTime) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [name, category, area, address, quantity, imagePath, renderPath, filePath, remark || '', createTime, updateTime]
     );
     
     console.log('数据库插入成功，ID:', result.insertId);
@@ -282,16 +286,16 @@ router.post('/upload', upload.single('modelFile'), async (req, res) => {
 // 更新模型
 router.put('/:id', (req, res) => {
   const { id } = req.params;
-  const { name, version, format, type, path } = req.body;
+  const { name, category, area, address, quantity, imagePath, renderPath, modelPath, remark, createTime, updateTime } = req.body;
   
   // 验证必填字段
-  if (!name || !version || !format || !type || !path) {
+  if (!name || !category || !area || !address || !quantity || !imagePath || !renderPath || !modelPath || !createTime || !updateTime) {
     return res.status(400).json({ message: '缺少必要字段' });
   }
   
   pool.execute(
-    'UPDATE models SET name = ?, version = ?, format = ?, type = ?, path = ? WHERE id = ?',
-    [name, version, format, type, path, id],
+    'UPDATE models SET name = ?, category = ?, area = ?, address = ?, quantity = ?, imagePath = ?, renderPath = ?, modelPath = ?, remark = ?, createTime = ?, updateTime = ? WHERE id = ?',
+    [name, category, area, address, quantity, imagePath, renderPath, modelPath, remark || '', createTime, updateTime, id],
     (err, results) => {
       if (err) return res.status(500).json({ message: '更新失败' });
       if (results.affectedRows === 0) {

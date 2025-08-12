@@ -58,7 +58,14 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 
-// 登录接口
+/**
+ * 用户登录接口
+ * @route POST /api/login
+ * @body {string} username - 用户名/手机号
+ * @body {string} password - 密码
+ * @returns {Object} { success: boolean, message: string, user: Object }
+ * @throws {500} 数据库错误
+ */
 router.post('/login', (req, res) => {
   const { username, password } = req.body;
   console.log('收到登录请求:', { username, password });
@@ -86,7 +93,12 @@ router.post('/login', (req, res) => {
   );
 });
 
-// 获取用户列表（管理员功能）
+/**
+ * 获取用户列表（管理员功能）
+ * @route GET /api/users
+ * @returns {Array<Object>} 用户对象数组
+ * @throws {500} 查询失败
+ */
 router.get('/users', (req, res) => {
   console.log('收到获取用户列表请求');
   pool.execute('SELECT id, username, phone, role, email FROM user', (err, results) => {
@@ -99,7 +111,18 @@ router.get('/users', (req, res) => {
   });
 });
 
-// 添加用户
+/**
+ * 添加新用户
+ * @route POST /api/users
+ * @body {string} username - 用户名
+ * @body {string} role - 用户角色
+ * @body {string} phone - 手机号
+ * @body {string} email - 邮箱
+ * @body {string} [password] - 密码，默认123456
+ * @returns {Object} { message: string, userId: number }
+ * @throws {400} 参数错误或手机号已存在
+ * @throws {500} 添加失败
+ */
 router.post('/users', (req, res) => {
   const { username, role, email, phone, password } = req.body;
   console.log('收到添加用户请求:', { username, role, email, phone, password });
@@ -131,7 +154,19 @@ router.post('/users', (req, res) => {
   );
 });
 
-// 更新用户
+/**
+ * 更新用户信息
+ * @route PUT /api/users/:id
+ * @param {number} id - 用户ID
+ * @body {string} username - 用户名
+ * @body {string} role - 用户角色
+ * @body {string} phone - 手机号
+ * @body {string} email - 邮箱
+ * @returns {Object} { message: string }
+ * @throws {400} 参数错误
+ * @throws {404} 用户不存在
+ * @throws {500} 更新失败
+ */
 router.put('/users/:id', (req, res) => {
   const { id } = req.params;
   const { username, role, email, phone } = req.body;
@@ -164,7 +199,14 @@ router.put('/users/:id', (req, res) => {
   );
 });
 
-// 删除用户
+/**
+ * 删除用户
+ * @route DELETE /api/users/:id
+ * @param {number} id - 用户ID
+ * @returns {Object} { message: string }
+ * @throws {404} 用户不存在
+ * @throws {500} 删除失败
+ */
 router.delete('/users/:id', (req, res) => {
   const { id } = req.params;
   

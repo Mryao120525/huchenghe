@@ -23,7 +23,7 @@ ModelList.vue
 - 当前为模拟实现，仅显示选择的文件名
 
 ### 模型展示
-- 以表格形式展示模型信息，包括ID、名称、版本、文件格式、类型、路径等
+- 以表格形式展示模型信息，包括ID、名称、类别、区域、主址等
 - 每行提供"详情"按钮，点击可跳转到模型详情页面
 
 ### 分页功能
@@ -51,13 +51,14 @@ ModelList.vue
       <div class="filter-bar">
         <span style="margin-right: 4px;">模型名称：</span>
         <el-input v-model="filterName" placeholder="名称" class="filter-item" style="width: 120px;" />
-        <span style="margin-right: 4px;">类型：</span>
-        <el-select v-model="filterType" placeholder="类型" class="filter-item filter-type" style="width: 120px;">
+        <span style="margin-right: 4px;">类别：</span>
+        <el-select v-model="filterType" placeholder="类别" class="filter-item filter-type" style="width: 120px;">
           <el-option label="全部" value="all" />
           <el-option label="石刻" value="石刻" />
           <el-option label="石碑" value="石碑" />
           <el-option label="雕塑" value="雕塑" />
           <el-option label="造像" value="造像" />
+          <el-option label="其他" value="其他" />
         </el-select>
         <div class="upload-btn" style="display: flex; align-items: center;">
           <el-button type="success" @click="triggerFileInput">上传模型</el-button>
@@ -80,12 +81,13 @@ ModelList.vue
       
       <!-- 表格区 -->
   <el-table :data="pagedTableData" class="model-table" border>
-  <el-table-column prop="id" label="ID" width="100" align="center" header-align="center" />
-  <el-table-column prop="name" label="模型名称" width="140" align="center" header-align="center" />
-  <el-table-column prop="version" label="版本" width="100" align="center" header-align="center" />
-  <el-table-column prop="format" label="文件格式" width="120" align="center" header-align="center" />
-    <el-table-column prop="type" label="类型" width="120" align="center" header-align="center" />
-  <el-table-column prop="path" label="路径" min-width="180" align="center" header-align="center" />
+  <el-table-column prop="id" label="ID" width="60" align="center" header-align="center" />
+  <el-table-column prop="name" label="名称" width="120" align="center" header-align="center" />
+  <el-table-column prop="category" label="类别" width="80" align="center" header-align="center" />
+  <el-table-column prop="area" label="区域" width="80" align="center" header-align="center" />
+  <el-table-column prop="address" label="主址" width="120" align="center" header-align="center" />
+  <el-table-column prop="quantity" label="数量" width="60" align="center" header-align="center" />
+    <el-table-column prop="imagePath" label="图片路径" min-width="150" align="center" header-align="center" />
   <el-table-column label="操作" width="120" align="center" header-align="center">
           <template #default="scope">
             <el-button size="small" @click="handleView(scope.$index, scope.row)">详情</el-button>
@@ -148,9 +150,14 @@ const handleUploadConfirm = async (modelInfo) => {
   const formData = new FormData();
   formData.append('modelFile', selectedFile.value);
   formData.append('name', modelInfo.name);
-  formData.append('version', modelInfo.version);
-  formData.append('type', modelInfo.type);
-  formData.append('uploader', modelInfo.uploader);
+  formData.append('category', modelInfo.category);
+  formData.append('area', modelInfo.area);
+  formData.append('address', modelInfo.address);
+  formData.append('quantity', modelInfo.quantity);
+  formData.append('imagePath', modelInfo.imagePath);
+  formData.append('renderPath', modelInfo.renderPath);
+  formData.append('modelPath', modelInfo.modelPath);
+  formData.append('remark', modelInfo.remark);
   
   try {
     // 调用后端API上传文件

@@ -41,6 +41,7 @@ const path = require('path');                 // 路径处理模块
 // 引入路由模块
 const modelRoutes = require('./routes/modelRoutes'); // 引入模型相关路由模块
 const loginRoutes = require('./routes/loginRoutes'); // 引入登录相关路由模块
+const userRoutes = require('./routes/userRoutes'); // 引入用户管理路由模块
 
 // 创建Express应用实例
 const app = express();
@@ -56,7 +57,15 @@ app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' })); // 解析URL�
 // 我们需要自定义中间件来处理NAS上的文件访问
 app.use('/uploads', express.static('uploads'));
 
-// 自定义中间件处理NAS文件访问
+// 自定义中间件处理NAS文件访问请求
+/**
+ * 自定义中间件处理NAS文件访问请求
+ * @param {Object} req - Express请求对象
+ * @param {Object} res - Express响应对象
+ * @param {Function} next - Express next函数
+ * @description 处理对NAS存储的三维模型文件的访问请求，支持文件下载和流式传输
+ *              若NAS路径文件不存在，会尝试从本地uploads目录查找备份
+ */
 app.use('/nas-files', (req, res) => {
   const filePath = '\\\\192.168.0.49\\宝可橙科技\\_02项目文件\\_01FBX模型文件' + req.path;
   
@@ -91,6 +100,13 @@ app.use('/nas-files', (req, res) => {
 });
 
 // 添加请求日志中间件
+/**
+ * 请求日志中间件
+ * @param {Object} req - Express请求对象
+ * @param {Object} res - Express响应对象
+ * @param {Function} next - Express next函数
+ * @description 记录所有HTTP请求的时间、方法和路径
+ */
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
   next();
@@ -98,6 +114,7 @@ app.use((req, res, next) => {
 
 // 注册路由
 app.use('/api/models', modelRoutes); // 挂载模型相关API路由到/api/models路径下
+app.use('/api/users', userRoutes); // 挂载用户管理API路由到/api/users路径下
 app.use('/api', loginRoutes); // 挂载登录相关API路由到/api路径下
 
 // 添加根路径路由用于健康检查
@@ -106,6 +123,14 @@ app.get('/', (req, res) => {
 });
 
 // 添加错误处理中间件
+/**
+ * 全局错误处理中间件
+ * @param {Error} err - 错误对象
+ * @param {Object} req - Express请求对象
+ * @param {Object} res - Express响应对象
+ * @param {Function} next - Express next函数
+ * @description 统一处理应用中发生的所有错误，包括Multer文件上传错误
+ */
 app.use((err, req, res, next) => {
   console.error('服务器错误:', err);
   // 文件上传错误处理
@@ -118,6 +143,12 @@ app.use((err, req, res, next) => {
 });
 
 // 404处理
+/**
+ * 404错误处理中间件
+ * @param {Object} req - Express请求对象
+ * @param {Object} res - Express响应对象
+ * @description 处理所有未匹配路由的请求，返回404状态和提示信息
+ */
 app.use((req, res) => {
   res.status(404).json({ message: '请求的资源不存在' });
 });

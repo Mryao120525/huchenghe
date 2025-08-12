@@ -11,30 +11,64 @@
       :rules="rules"
       label-width="100px"
     >
-      <el-form-item label="模型名称" prop="name">
+      <el-form-item label="名称" prop="name">
         <el-input v-model="form.name" />
       </el-form-item>
       
-      <el-form-item label="上传人员" prop="uploader">
-        <el-input v-model="form.uploader" />
-      </el-form-item>
-      
-      <el-form-item label="上传时间" prop="uploadTime">
-        <el-input v-model="form.uploadTime" disabled />
-      </el-form-item>
-      
-      <el-form-item label="模型版本" prop="version">
-        <el-input v-model="form.version" />
-      </el-form-item>
-      
-      <el-form-item label="模型类型" prop="type">
-        <el-select v-model="form.type" placeholder="请选择模型类型" style="width: 100%">
+      <el-form-item label="类别" prop="category">
+        <el-select v-model="form.category" placeholder="请选择类别" style="width: 100%">
           <el-option label="石刻" value="石刻" />
           <el-option label="石碑" value="石碑" />
           <el-option label="雕塑" value="雕塑" />
           <el-option label="造像" value="造像" />
           <el-option label="其他" value="其他" />
         </el-select>
+      </el-form-item>
+      
+      <el-form-item label="区域" prop="area">
+        <el-input v-model="form.area" />
+      </el-form-item>
+      
+      <el-form-item label="主址" prop="address">
+        <el-input v-model="form.address" />
+      </el-form-item>
+      
+      <el-form-item label="数量" prop="quantity">
+        <el-input-number v-model="form.quantity" :min="1" :max="9999" />
+      </el-form-item>
+      
+      <el-form-item label="图片路径" prop="imagePath">
+        <el-input v-model="form.imagePath" />
+      </el-form-item>
+      
+      <el-form-item label="渲染图路径" prop="renderPath">
+        <el-input v-model="form.renderPath" />
+      </el-form-item>
+      
+      <el-form-item label="模型存储路径" prop="modelPath">
+        <el-input v-model="form.modelPath" />
+      </el-form-item>
+      
+      <el-form-item label="备注" prop="remark">
+        <el-input v-model="form.remark" type="textarea" />
+      </el-form-item>
+      
+      <el-form-item label="创建时间" prop="createTime">
+        <el-date-picker 
+          v-model="form.createTime" 
+          type="datetime" 
+          placeholder="选择日期时间"
+          style="width: 100%"
+        />
+      </el-form-item>
+      
+      <el-form-item label="更新时间" prop="updateTime">
+        <el-date-picker 
+          v-model="form.updateTime" 
+          type="datetime" 
+          placeholder="选择日期时间"
+          style="width: 100%"
+        />
       </el-form-item>
     </el-form>
     
@@ -70,25 +104,49 @@ const formRef = ref();
 // 表单数据
 const form = reactive({
   name: '',
-  uploader: '',
-  uploadTime: '',
-  version: '1.0',
-  type: '其他'
+  category: '其他',
+  area: '',
+  address: '',
+  quantity: 1,
+  imagePath: '',
+  renderPath: '',
+  modelPath: '',
+  remark: '',
+  createTime: '',
+  updateTime: ''
 });
 
 // 表单验证规则
 const rules = {
   name: [
-    { required: true, message: '请输入模型名称', trigger: 'blur' }
+    { required: true, message: '请输入名称', trigger: 'blur' }
   ],
-  uploader: [
-    { required: true, message: '请输入上传人员', trigger: 'blur' }
+  category: [
+    { required: true, message: '请选择类别', trigger: 'change' }
   ],
-  version: [
-    { required: true, message: '请输入模型版本', trigger: 'blur' }
+  area: [
+    { required: true, message: '请输入区域', trigger: 'blur' }
   ],
-  type: [
-    { required: true, message: '请选择模型类型', trigger: 'change' }
+  address: [
+    { required: true, message: '请输入主址', trigger: 'blur' }
+  ],
+  quantity: [
+    { required: true, message: '请输入数量', trigger: 'change' }
+  ],
+  imagePath: [
+    { required: true, message: '请输入图片路径', trigger: 'blur' }
+  ],
+  renderPath: [
+    { required: true, message: '请输入渲染图路径', trigger: 'blur' }
+  ],
+  modelPath: [
+    { required: true, message: '请输入模型存储路径', trigger: 'blur' }
+  ],
+  createTime: [
+    { required: true, message: '请选择创建时间', trigger: 'change' }
+  ],
+  updateTime: [
+    { required: true, message: '请选择更新时间', trigger: 'change' }
   ]
 };
 
@@ -98,17 +156,16 @@ watch(() => props.visible, (newVal) => {
   if (newVal) {
     // 初始化表单数据
     form.name = props.fileName.replace(/\.[^/.]+$/, ""); // 去掉文件扩展名
-    form.uploader = ''; // 需要用户填写
-    form.uploadTime = new Date().toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
-    form.version = '1.0';
-    form.type = '其他';
+    form.category = '其他';
+    form.area = '';
+    form.address = '';
+    form.quantity = 1;
+    form.imagePath = '';
+    form.renderPath = '';
+    form.modelPath = '';
+    form.remark = '';
+    form.createTime = new Date();
+    form.updateTime = new Date();
   }
 });
 
@@ -123,7 +180,13 @@ const handleSubmit = async () => {
   try {
     await formRef.value.validate((valid) => {
       if (valid) {
-        emit('confirm', { ...form });
+        // 格式化日期时间
+        const submitData = {
+          ...form,
+          createTime: form.createTime ? form.createTime.toISOString().slice(0, 19).replace('T', ' ') : '',
+          updateTime: form.updateTime ? form.updateTime.toISOString().slice(0, 19).replace('T', ' ') : ''
+        };
+        emit('confirm', submitData);
         handleClose();
       } else {
         ElMessage.error('请填写完整信息');
