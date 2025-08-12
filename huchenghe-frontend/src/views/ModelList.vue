@@ -84,10 +84,10 @@ ModelList.vue
   <el-table-column prop="id" label="ID" width="60" align="center" header-align="center" />
   <el-table-column prop="name" label="名称" width="120" align="center" header-align="center" />
   <el-table-column prop="category" label="类别" width="80" align="center" header-align="center" />
-  <el-table-column prop="region" label="区域" width="80" align="center" header-align="center" />
+  <el-table-column prop="area" label="区域" width="80" align="center" header-align="center" />
   <el-table-column prop="address" label="主址" width="120" align="center" header-align="center" />
   <el-table-column prop="quantity" label="数量" width="60" align="center" header-align="center" />
-  <el-table-column prop="image_url" label="图片路径" min-width="150" align="center" header-align="center" />
+  <el-table-column prop="image_path" label="图片路径" min-width="150" align="center" header-align="center" />
   <el-table-column label="操作" width="120" align="center" header-align="center">
           <template #default="scope">
             <el-button size="small" @click="handleView(scope.$index, scope.row)">详情</el-button>
@@ -162,13 +162,13 @@ const handleUploadConfirm = async (modelInfo) => {
   formData.append('quantity', modelInfo.quantity);
   
   // 设置默认路径，如果用户没有输入的话
-  const defaultImagePath = modelInfo.imagePath || `/images/${modelInfo.name}.jpg`;
-  const defaultRenderPath = modelInfo.renderPath || `/renders/${modelInfo.name}.png`;
-  const defaultModelPath = modelInfo.modelPath || `/models/${selectedFile.value.name}`;
+  const defaultImagePath = modelInfo.image_path || `/images/${modelInfo.name}.jpg`;
+  const defaultRenderPath = modelInfo.render_path || `/renders/${modelInfo.name}.png`;
+  const defaultModelPath = modelInfo.model_path || `/models/${selectedFile.value.name}`;
   
-  formData.append('imagePath', defaultImagePath);
-  formData.append('renderPath', defaultRenderPath);
-  formData.append('modelPath', defaultModelPath);
+  formData.append('image_path', defaultImagePath);
+  formData.append('render_path', defaultRenderPath);
+  formData.append('model_path', defaultModelPath);
   formData.append('remark', modelInfo.remark);
   
   try {

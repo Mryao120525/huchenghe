@@ -135,16 +135,16 @@ router.post('/add-sample', async (req, res) => {
       area: 'A区',
       address: '一楼展厅',
       quantity: 1,
-      imagePath: '/images/sample.jpg',
-      renderPath: '/renders/sample.png',
-      modelPath: '/models/sample.obj',
+      image_path: '/images/sample.jpg',
+      render_path: '/renders/sample.png',
+      model_path: '/models/sample.obj',
       remark: '这是一个示例模型'
     };
     
-    // 执行插入操作 - 使用实际的数据库字段名
+    // 执行插入操作 - 统一为下划线命名
     const [result] = await pool.execute(
-      'INSERT INTO models (model_code, name, category, region, address, quantity, image_url, render_url, nas_path, remark, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())',
-      [sampleModel.model_code, sampleModel.name, sampleModel.category, sampleModel.area, sampleModel.address, sampleModel.quantity, sampleModel.imagePath, sampleModel.renderPath, sampleModel.modelPath, sampleModel.remark]
+      'INSERT INTO models (model_code, name, category, area, address, quantity, image_path, render_path, model_path, remark) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [sampleModel.model_code, sampleModel.name, sampleModel.category, sampleModel.area, sampleModel.address, sampleModel.quantity, sampleModel.image_path, sampleModel.render_path, sampleModel.model_path, sampleModel.remark]
     );
     
     res.json({ message: '示例数据添加成功', modelId: result.insertId });
@@ -164,7 +164,7 @@ router.get('/', async (req, res) => {
     const parsedPageSize = Math.max(1, Math.min(100, parseInt(pageSize, 10) || 10)); // 限制最大页面大小为100
     const offset = (parsedPage - 1) * parsedPageSize;
     
-    let sql = 'SELECT id, model_code, name, category, region, address, quantity, image_url, render_url, nas_path, remark, created_at, updated_at FROM models WHERE 1=1';
+    let sql = 'SELECT id, model_code, name, category, area, address, quantity, image_path, render_path, model_path, remark, create_time, update_time FROM models WHERE 1=1';
     const params = [];
     
     // 名称筛选
@@ -225,7 +225,7 @@ router.get('/count', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const [results] = await pool.execute('SELECT id, model_code, name, category, region, address, quantity, image_url, render_url, nas_path, remark, created_at, updated_at FROM models WHERE id = ?', [id]);
+    const [results] = await pool.execute('SELECT id, model_code, name, category, area, address, quantity, image_path, render_path, model_path, remark, create_time, update_time FROM models WHERE id = ?', [id]);
     if (results.length === 0) {
       return res.status(404).json({ message: '未找到模型' });
     }
@@ -249,9 +249,9 @@ router.post('/upload', upload.single('modelFile'), async (req, res) => {
       return res.status(400).json({ message: '请选择要上传的文件' });
     }
     
-    // 获取表单数据
-    const { name, category, area, address, quantity, imagePath, renderPath, modelPath, remark } = req.body;
-    console.log('表单数据:', { name, category, area, address, quantity, imagePath, renderPath, modelPath, remark });
+    // 获取表单数据（统一为下划线命名）
+    const { name, category, area, address, quantity, image_path, render_path, model_path, remark } = req.body;
+    console.log('表单数据:', { name, category, area, address, quantity, image_path, render_path, model_path, remark });
     
     // 验证必填字段
     if (!name) {
@@ -282,10 +282,10 @@ router.post('/upload', upload.single('modelFile'), async (req, res) => {
     const modelCode = 'MODEL_' + Date.now();
 
     console.log('准备插入数据库');
-    // 插入数据库记录 - 使用实际的数据库字段名
+    // 插入数据库记录 - 统一为下划线命名；时间字段使用默认值
     const [result] = await pool.execute(
-      'INSERT INTO models (model_code, name, category, region, address, quantity, image_url, render_url, nas_path, remark, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())',
-      [modelCode, name, category || null, area || null, address || null, quantity || 1, imagePath || null, renderPath || null, filePath, remark || null]
+      'INSERT INTO models (model_code, name, category, area, address, quantity, image_path, render_path, model_path, remark) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [modelCode, name, category || null, area || null, address || null, quantity || 1, image_path || null, render_path || null, filePath, remark || null]
     );
     
     console.log('数据库插入成功，ID:', result.insertId);
@@ -314,7 +314,7 @@ router.post('/upload', upload.single('modelFile'), async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, category, area, address, quantity, imagePath, renderPath, modelPath, remark } = req.body;
+    const { name, category, area, address, quantity, image_path, render_path, model_path, remark } = req.body;
 
     // 验证必填字段
     if (!name) {
@@ -327,10 +327,10 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ message: '模型不存在' });
     }
 
-    // 更新模型信息 - 使用实际的数据库字段名
+    // 更新模型信息 - 统一为下划线命名
     await pool.execute(
-      'UPDATE models SET name = ?, category = ?, region = ?, address = ?, quantity = ?, image_url = ?, render_url = ?, nas_path = ?, remark = ?, updated_at = NOW() WHERE id = ?',
-      [name, category || null, area || null, address || null, quantity || 1, imagePath || null, renderPath || null, modelPath || null, remark || null, id]
+      'UPDATE models SET name = ?, category = ?, area = ?, address = ?, quantity = ?, image_path = ?, render_path = ?, model_path = ?, remark = ?, update_time = NOW() WHERE id = ?',
+      [name, category || null, area || null, address || null, quantity || 1, image_path || null, render_path || null, model_path || null, remark || null, id]
     );
 
     res.json({ message: '模型更新成功' });
