@@ -11,7 +11,7 @@ ModelDetail.vue
         <span class="detail-title-text">
           模型详情 - {{ modelDetail ? modelDetail.name : '' }}
         </span>
-        <el-button type="primary">下载模型</el-button>
+        <el-button type="primary" @click="downloadModel" :disabled="!modelDetail || !modelDetail.model_path">下载模型</el-button>
       </div>
     </el-header>
     <el-main style="display: flex; gap: 20px; position: relative;">
@@ -32,12 +32,15 @@ ModelDetail.vue
             <div v-if="modelDetail">
               <p><strong>ID:</strong> {{ modelDetail.id }}</p>
               <p><strong>模型名称:</strong> {{ modelDetail.name }}</p>
-              <p><strong>版本:</strong> {{ modelDetail.version }}</p>
-              <p><strong>文件格式:</strong> {{ modelDetail.format }}</p>
-              <p><strong>类型:</strong> {{ modelDetail.type }}</p>
-              <p><strong>路径:</strong> {{ modelDetail.path }}</p>
-              <p><strong>上传者:</strong> {{ modelDetail.uploader }}</p>
-              <p><strong>上传时间:</strong> {{ modelDetail.uploadTime }}</p>
+              <p><strong>类别:</strong> {{ modelDetail.category }}</p>
+              <p><strong>区域:</strong> {{ modelDetail.area }}</p>
+              <p><strong>主址:</strong> {{ modelDetail.address }}</p>
+              <p><strong>数量:</strong> {{ modelDetail.quantity }}</p>
+              <p><strong>图片路径:</strong> {{ modelDetail.image_path }}</p>
+              <p><strong>渲染图路径:</strong> {{ modelDetail.render_path }}</p>
+              <p><strong>模型文件路径:</strong> {{ modelDetail.model_path }}</p>
+              <p><strong>创建时间:</strong> {{ modelDetail.create_time }}</p>
+              <p><strong>更新时间:</strong> {{ modelDetail.update_time }}</p>
             </div>
             <div v-else>
               <p>未找到该模型信息</p>
@@ -69,6 +72,8 @@ ModelDetail.vue
 import { computed, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ref } from 'vue';
+import { modelAPI } from '../api/index.js';
+import api from '../api/index.js';
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
@@ -83,37 +88,51 @@ const goBack = () => {
   router.go(-1);
 };
 
-// 本地模拟模型数据，与列表页字段一一对应
-const modelList = [
-  { id: 1, name: '战斗机', version: 'v1.0', format: 'OBJ', type: '石刻', path: '/models/plane.obj', uploader: '用户A', uploadTime: '2023-01-01' },
-  { id: 2, name: '装甲车', version: 'v2.1', format: 'STL', type: '雕塑', path: '/models/tank.stl', uploader: '用户B', uploadTime: '2023-01-02' },
-  { id: 3, name: '火箭发射器', version: 'v1.5', format: 'GLTF', type: '石碑', path: '/models/rocket.gltf', uploader: '用户C', uploadTime: '2023-01-03' },
-  { id: 4, name: '假山', version: 'v1.5', format: 'GLTF', type: '石碑', path: '/models/rock2.gltf', uploader: '用户A', uploadTime: '2023-01-04' },
-  { id: 5, name: '佛像', version: 'v2.0', format: 'OBJ', type: '造像', path: '/models/buddha.obj', uploader: '用户B', uploadTime: '2023-01-05' },
-  { id: 6, name: '狮子雕塑', version: 'v1.2', format: 'STL', type: '雕塑', path: '/models/lion.stl', uploader: '用户C', uploadTime: '2023-01-06' },
-  { id: 7, name: '石碑A', version: 'v1.0', format: 'GLTF', type: '石碑', path: '/models/steleA.gltf', uploader: '用户A', uploadTime: '2023-01-07' },
-  { id: 8, name: '石碑B', version: 'v1.1', format: 'OBJ', type: '石碑', path: '/models/steleB.obj', uploader: '用户B', uploadTime: '2023-01-08' },
-  { id: 9, name: '石刻龙', version: 'v2.3', format: 'STL', type: '石刻', path: '/models/dragon.stl', uploader: '用户C', uploadTime: '2023-01-09' },
-  { id: 10, name: '石刻虎', version: 'v2.4', format: 'OBJ', type: '石刻', path: '/models/tiger.obj', uploader: '用户A', uploadTime: '2023-01-10' },
-  { id: 11, name: '石刻凤', version: 'v2.5', format: 'GLTF', type: '石刻', path: '/models/phoenix.gltf', uploader: '用户B', uploadTime: '2023-01-11' },
-  { id: 12, name: '雕塑A', version: 'v1.0', format: 'OBJ', type: '雕塑', path: '/models/sculptA.obj', uploader: '用户C', uploadTime: '2023-01-12' },
-  { id: 13, name: '雕塑B', version: 'v1.1', format: 'STL', type: '雕塑', path: '/models/sculptB.stl', uploader: '用户A', uploadTime: '2023-01-13' },
-  { id: 14, name: '造像A', version: 'v1.0', format: 'GLTF', type: '造像', path: '/models/statueA.gltf', uploader: '用户B', uploadTime: '2023-01-14' },
-  { id: 15, name: '造像B', version: 'v1.1', format: 'OBJ', type: '造像', path: '/models/statueB.obj', uploader: '用户C', uploadTime: '2023-01-15' },
-];
-
-const modelDetail = computed(() => {
-  return modelList.find(item => String(item.id) === String(route.params.id));
-});
+const modelDetail = ref(null);
+const loading = ref(false);
+const errorMsg = ref('');
 
 
 
 let renderer, scene, camera, animationId, controls;
 let loadedModel = ref(null);
 let transformControls = null;
+let handleResize;
+
+const getApiOrigin = () => {
+  const base = api.defaults.baseURL || '';
+  return base.replace(/\/?api\/?$/, '');
+};
+
+const loadThreeModel = (path) => {
+  if (!path) return;
+  const origin = getApiOrigin();
+  const fullUrl = path.startsWith('http') ? path : `${origin}${path}`;
+  const ext = (fullUrl.split('.').pop() || '').toLowerCase();
+  // 仅示例支持 FBX
+  if (ext === 'fbx') {
+    const loader = new FBXLoader();
+    loader.load(
+      fullUrl,
+      (object) => {
+        object.scale.set(0.1, 0.1, 0.1);
+        scene.add(object);
+        loadedModel.value = object;
+        renderer.domElement.addEventListener('pointermove', onModelHover);
+        renderer.domElement.addEventListener('pointerdown', onModelClick);
+      },
+      undefined,
+      (error) => {
+        console.error('FBX 加载失败', error);
+      }
+    );
+  } else {
+    console.warn('暂未支持的模型格式:', ext, fullUrl);
+  }
+};
 
 
-onMounted(() => {
+onMounted(async () => {
   const container = document.getElementById('three-container');
   if (!container) return;
   // 场景
@@ -130,13 +149,13 @@ onMounted(() => {
   container.appendChild(renderer.domElement);
 
   // 监听窗口缩放，动态调整threejs画布和相机
-  function handleResize() {
+  handleResize = function () {
     const width = container.clientWidth;
     const height = container.clientHeight;
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
     renderer.setSize(width, height);
-  }
+  };
   window.addEventListener('resize', handleResize);
   // 轨道控制
   controls = new OrbitControls(camera, renderer.domElement);
@@ -152,26 +171,18 @@ onMounted(() => {
   light.position.set(5, 5, 5);
   scene.add(light);
 
-  // 仅在战斗机页面加载 FBX 模型
-
-  if (modelDetail.value && modelDetail.value.name === '战斗机') {
-    const loader = new FBXLoader();
-    loader.load(
-      '/src/assets/战斗机.fbx',
-      (object) => {
-        object.scale.set(0.1, 0.1, 0.1); // 放大10倍
-        scene.add(object);
-        loadedModel.value = object;
-        // 监听模型点击，显示坐标轴控件
-        renderer.domElement.addEventListener('pointermove', onModelHover);
-        renderer.domElement.addEventListener('pointerdown', onModelClick);
-      },
-      undefined,
-      (error) => {
-        alert('FBX 加载失败，请检查路径和资源！');
-        console.error('FBX 加载失败', error);
-      }
-    );
+  // 拉取后端模型详情，并按 model_path 加载三维模型
+  try {
+    loading.value = true;
+    const id = route.params.id;
+    const resp = await modelAPI.getModelById(id);
+    modelDetail.value = resp.data;
+    loadThreeModel(modelDetail.value?.model_path);
+  } catch (e) {
+    console.error('获取模型详情失败:', e);
+    errorMsg.value = '获取模型详情失败';
+  } finally {
+    loading.value = false;
   }
 
   // 高亮相关变量
@@ -248,7 +259,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
-  window.removeEventListener('resize', handleResize);
+  if (handleResize) window.removeEventListener('resize', handleResize);
   if (renderer && renderer.domElement) {
     renderer.domElement.remove();
   }
@@ -256,6 +267,13 @@ onBeforeUnmount(() => {
     cancelAnimationFrame(animationId);
   }
 });
+
+const downloadModel = () => {
+  if (!modelDetail.value?.model_path) return;
+  const origin = getApiOrigin();
+  const fullUrl = `${origin}${modelDetail.value.model_path}`;
+  window.open(fullUrl, '_blank');
+};
 </script>
 
 <style scoped>
