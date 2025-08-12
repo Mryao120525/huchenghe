@@ -128,8 +128,8 @@ const upload = multer({
 router.post('/add-sample', async (req, res) => {
   try {
     // 插入示例数据
-    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
     const sampleModel = {
+      model_code: 'SAMPLE_' + Date.now(),
       name: '示例模型',
       category: '雕塑',
       area: 'A区',
@@ -138,15 +138,13 @@ router.post('/add-sample', async (req, res) => {
       imagePath: '/images/sample.jpg',
       renderPath: '/renders/sample.png',
       modelPath: '/models/sample.obj',
-      remark: '这是一个示例模型',
-      createTime: now,
-      updateTime: now
+      remark: '这是一个示例模型'
     };
     
-    // 执行插入操作
+    // 执行插入操作 - 使用实际的数据库字段名
     const [result] = await pool.execute(
-      'INSERT INTO models (name, category, area, address, quantity, imagePath, renderPath, modelPath, remark, createTime, updateTime) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [sampleModel.name, sampleModel.category, sampleModel.area, sampleModel.address, sampleModel.quantity, sampleModel.imagePath, sampleModel.renderPath, sampleModel.modelPath, sampleModel.remark, sampleModel.createTime, sampleModel.updateTime]
+      'INSERT INTO models (model_code, name, category, region, address, quantity, image_url, render_url, nas_path, remark, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())',
+      [sampleModel.model_code, sampleModel.name, sampleModel.category, sampleModel.area, sampleModel.address, sampleModel.quantity, sampleModel.imagePath, sampleModel.renderPath, sampleModel.modelPath, sampleModel.remark]
     );
     
     res.json({ message: '示例数据添加成功', modelId: result.insertId });
@@ -160,15 +158,13 @@ router.post('/add-sample', async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const { name, type, page = 1, pageSize = 10 } = req.query;
-    // 简化分页参数处理
-    const parsedPage = parseInt(page, 10) || 1;
-    const parsedPageSize = parseInt(pageSize, 10) || 10;
+    
+    // 确保分页参数是有效的正整数
+    const parsedPage = Math.max(1, parseInt(page, 10) || 1);
+    const parsedPageSize = Math.max(1, Math.min(100, parseInt(pageSize, 10) || 10)); // 限制最大页面大小为100
     const offset = (parsedPage - 1) * parsedPageSize;
-    // 最终参数验证
-    if (!Number.isInteger(parsedPage) || !Number.isInteger(parsedPageSize) || parsedPage < 1 || parsedPageSize < 1) {
-      throw new Error('分页参数必须为正整数');
-    }
-    let sql = 'SELECT * FROM models WHERE 1=1';
+    
+    let sql = 'SELECT id, model_code, name, category, region, address, quantity, image_url, render_url, nas_path, remark, created_at, updated_at FROM models WHERE 1=1';
     const params = [];
     
     // 名称筛选
@@ -183,10 +179,13 @@ router.get('/', async (req, res) => {
       params.push(type);
     }
     
-    // 添加分页
+    // 添加分页 - 确保参数是整数
     sql += ' LIMIT ?, ?';
-    // 确保offset和parsedPageSize是整数类型
     params.push(offset, parsedPageSize);
+    
+    console.log('执行SQL查询:', sql);
+    console.log('查询参数:', params);
+    
     const [results] = await pool.execute(sql, params);
     res.json(results);
   } catch (err) {
@@ -226,7 +225,7 @@ router.get('/count', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const [results] = await pool.execute('SELECT * FROM models WHERE id = ?', [id]);
+    const [results] = await pool.execute('SELECT id, model_code, name, category, region, address, quantity, image_url, render_url, nas_path, remark, created_at, updated_at FROM models WHERE id = ?', [id]);
     if (results.length === 0) {
       return res.status(404).json({ message: '未找到模型' });
     }
@@ -255,9 +254,9 @@ router.post('/upload', upload.single('modelFile'), async (req, res) => {
     console.log('表单数据:', { name, category, area, address, quantity, imagePath, renderPath, modelPath, remark });
     
     // 验证必填字段
-    if (!name || !category || !area || !address || !quantity || !imagePath || !renderPath || !modelPath) {
-      console.log('缺少必要字段');
-      return res.status(400).json({ message: '缺少必要字段' });
+    if (!name) {
+      console.log('缺少必要字段: name');
+      return res.status(400).json({ message: '缺少必要字段: 模型名称' });
     }
     
     // 获取文件信息
@@ -278,26 +277,36 @@ router.post('/upload', upload.single('modelFile'), async (req, res) => {
     }
     
     console.log('存储路径:', filePath);
-    const now = Date.now(); // 使用时间戳
-    const createTime = now;
-    const updateTime = now;
+    
+    // 生成模型编码
+    const modelCode = 'MODEL_' + Date.now();
 
     console.log('准备插入数据库');
-    // 插入数据库记录
+    // 插入数据库记录 - 使用实际的数据库字段名
     const [result] = await pool.execute(
-      'INSERT INTO models (name, category, area, address, quantity, imagePath, renderPath, modelPath, remark, createTime, updateTime, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [name, category, area, address, quantity, imagePath, renderPath, filePath, remark || '', createTime, updateTime, 1] // 添加初始版本号1
+      'INSERT INTO models (model_code, name, category, region, address, quantity, image_url, render_url, nas_path, remark, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())',
+      [modelCode, name, category || null, area || null, address || null, quantity || 1, imagePath || null, renderPath || null, filePath, remark || null]
     );
     
     console.log('数据库插入成功，ID:', result.insertId);
     res.json({ 
       message: '模型上传成功', 
       modelId: result.insertId,
+      modelCode: modelCode,
       filePath: filePath
     });
   } catch (error) {
     console.error('文件上传失败:', error);
-    res.status(500).json({ message: '文件上传失败', error: error.message });
+    // 提供更详细的错误信息
+    let errorMessage = '文件上传失败';
+    if (error.code === 'ER_NO_SUCH_TABLE') {
+      errorMessage = '数据库表不存在，请先运行数据库迁移脚本';
+    } else if (error.code === 'ER_BAD_FIELD_ERROR') {
+      errorMessage = '数据库字段错误，请检查表结构';
+    } else if (error.code === 'ER_DUP_ENTRY') {
+      errorMessage = '模型编码重复，请重试';
+    }
+    res.status(500).json({ message: errorMessage, error: error.message, code: error.code });
   }
 });
 
@@ -305,29 +314,26 @@ router.post('/upload', upload.single('modelFile'), async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, category, area, address, quantity, imagePath, renderPath, modelPath, remark, createTime } = req.body;
+    const { name, category, area, address, quantity, imagePath, renderPath, modelPath, remark } = req.body;
 
     // 验证必填字段
-    if (!name || !category || !area || !address || !quantity || !imagePath || !renderPath || !modelPath || !createTime) {
-      return res.status(400).json({ message: '缺少必要字段' });
+    if (!name) {
+      return res.status(400).json({ message: '缺少必要字段: 模型名称' });
     }
 
-    // 查询当前版本号
-    const [modelResult] = await pool.execute('SELECT version FROM models WHERE id = ?', [id]);
+    // 检查模型是否存在
+    const [modelResult] = await pool.execute('SELECT id FROM models WHERE id = ?', [id]);
     if (modelResult.length === 0) {
       return res.status(404).json({ message: '模型不存在' });
     }
-    const currentVersion = modelResult[0].version || 1;
-    const newVersion = currentVersion + 1;
-    const updateTime = Date.now(); // 更新时间戳
 
-    // 更新模型信息
+    // 更新模型信息 - 使用实际的数据库字段名
     await pool.execute(
-      'UPDATE models SET name = ?, category = ?, area = ?, address = ?, quantity = ?, imagePath = ?, renderPath = ?, modelPath = ?, remark = ?, createTime = ?, updateTime = ?, version = ? WHERE id = ?',
-      [name, category, area, address, quantity, imagePath, renderPath, modelPath, remark || '', createTime, updateTime, newVersion, id]
+      'UPDATE models SET name = ?, category = ?, region = ?, address = ?, quantity = ?, image_url = ?, render_url = ?, nas_path = ?, remark = ?, updated_at = NOW() WHERE id = ?',
+      [name, category || null, area || null, address || null, quantity || 1, imagePath || null, renderPath || null, modelPath || null, remark || null, id]
     );
 
-    res.json({ message: '模型更新成功', version: newVersion });
+    res.json({ message: '模型更新成功' });
   } catch (error) {
     console.error('更新模型失败:', error);
     res.status(500).json({ message: '更新失败', error: error.message });

@@ -30,6 +30,7 @@ async function migrateModelsTable() {
     const createTableSQL = `
       CREATE TABLE models (
         id INT AUTO_INCREMENT PRIMARY KEY,
+        model_code VARCHAR(100) UNIQUE NOT NULL,
         name VARCHAR(255) NOT NULL,
         category VARCHAR(100) NOT NULL,
         area VARCHAR(100) NOT NULL,
@@ -43,7 +44,8 @@ async function migrateModelsTable() {
         updateTime DATETIME NOT NULL,
         INDEX idx_name (name),
         INDEX idx_category (category),
-        INDEX idx_area (area)
+        INDEX idx_area (area),
+        INDEX idx_model_code (model_code)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `;
     
@@ -58,10 +60,12 @@ async function migrateModelsTable() {
       // 将旧数据迁移到新表结构
       for (const row of oldRows) {
         const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+        const modelCode = 'MIGRATED_' + Date.now() + '_' + Math.round(Math.random() * 1000);
         await pool.execute(
-          `INSERT INTO models (name, category, area, address, quantity, imagePath, renderPath, modelPath, remark, createTime, updateTime) 
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO models (model_code, name, category, area, address, quantity, imagePath, renderPath, modelPath, remark, createTime, updateTime) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
+            modelCode,
             row.name || '未命名模型',
             row.type || '其他',
             '未指定',

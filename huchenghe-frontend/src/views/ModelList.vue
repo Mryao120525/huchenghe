@@ -84,10 +84,10 @@ ModelList.vue
   <el-table-column prop="id" label="ID" width="60" align="center" header-align="center" />
   <el-table-column prop="name" label="名称" width="120" align="center" header-align="center" />
   <el-table-column prop="category" label="类别" width="80" align="center" header-align="center" />
-  <el-table-column prop="area" label="区域" width="80" align="center" header-align="center" />
+  <el-table-column prop="region" label="区域" width="80" align="center" header-align="center" />
   <el-table-column prop="address" label="主址" width="120" align="center" header-align="center" />
   <el-table-column prop="quantity" label="数量" width="60" align="center" header-align="center" />
-  <el-table-column prop="imagePath" label="图片路径" min-width="150" align="center" header-align="center" />
+  <el-table-column prop="image_url" label="图片路径" min-width="150" align="center" header-align="center" />
   <el-table-column label="操作" width="120" align="center" header-align="center">
           <template #default="scope">
             <el-button size="small" @click="handleView(scope.$index, scope.row)">详情</el-button>
@@ -160,9 +160,15 @@ const handleUploadConfirm = async (modelInfo) => {
   formData.append('area', modelInfo.area);
   formData.append('address', modelInfo.address);
   formData.append('quantity', modelInfo.quantity);
-  formData.append('imagePath', modelInfo.imagePath);
-  formData.append('renderPath', modelInfo.renderPath);
-  formData.append('modelPath', modelInfo.modelPath);
+  
+  // 设置默认路径，如果用户没有输入的话
+  const defaultImagePath = modelInfo.imagePath || `/images/${modelInfo.name}.jpg`;
+  const defaultRenderPath = modelInfo.renderPath || `/renders/${modelInfo.name}.png`;
+  const defaultModelPath = modelInfo.modelPath || `/models/${selectedFile.value.name}`;
+  
+  formData.append('imagePath', defaultImagePath);
+  formData.append('renderPath', defaultRenderPath);
+  formData.append('modelPath', defaultModelPath);
   formData.append('remark', modelInfo.remark);
   
   try {
@@ -178,7 +184,14 @@ const handleUploadConfirm = async (modelInfo) => {
     resetUploadState();
   } catch (error) {
     console.error('文件上传失败:', error);
-    ElMessage.error(`文件上传失败: ${error.message}`);
+    // 处理不同的错误响应格式
+    let errorMessage = '文件上传失败';
+    if (error.response && error.response.data) {
+      errorMessage = error.response.data.message || error.response.data.error || errorMessage;
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    ElMessage.error(`文件上传失败: ${errorMessage}`);
     // 上传失败也重置状态
     resetUploadState();
   }

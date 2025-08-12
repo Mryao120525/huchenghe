@@ -38,6 +38,7 @@
         <el-input-number v-model="form.quantity" :min="1" :max="9999" />
       </el-form-item>
       
+      <!--
       <el-form-item label="图片路径" prop="imagePath">
         <el-input v-model="form.imagePath" />
       </el-form-item>
@@ -45,6 +46,7 @@
       <el-form-item label="渲染图路径" prop="renderPath">
         <el-input v-model="form.renderPath" />
       </el-form-item>
+      -->
       
       <el-form-item label="模型存储路径" prop="modelPath">
         <el-input v-model="form.modelPath" />
@@ -109,15 +111,6 @@ const form = reactive({
 
 // 表单验证规则
 const rules = {
-  modelPath: [
-    { required: true, message: '请输入模型存储路径', trigger: 'blur' }
-  ],
-  imagePath: [
-    { required: true, message: '请输入图片路径', trigger: 'blur' }
-  ],
-  renderPath: [
-    { required: true, message: '请输入渲染图路径', trigger: 'blur' }
-  ],
   name: [
     { required: true, message: '请输入模型名称', trigger: 'blur' }
   ],
@@ -141,8 +134,7 @@ const rules = {
   ],
   modelPath: [
     { required: true, message: '请输入模型存储路径', trigger: 'blur' }
-  ],
-
+  ]
 };
 
 // 监听dialogVisible变化(原为监听props.visible)
