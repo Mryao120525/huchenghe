@@ -48,7 +48,7 @@ ModelList.vue
     </el-header>
     <el-main>
       <!-- 筛选区 -->
-      <div class="filter-bar">
+      <div class="filter-bar hc-panel" style="padding:16px 20px;">
         <span style="margin-right: 4px;">模型名称：</span>
         <el-input v-model="filterName" placeholder="名称" class="filter-item" style="width: 120px;" />
         <span style="margin-right: 4px;">类别：</span>
@@ -78,9 +78,14 @@ ModelList.vue
         :file-name="fileName"
         @confirm="handleUploadConfirm"
       />
+      <ModelEditDialog
+        v-model:visible="editDialogVisible"
+        :model="editingModel"
+        @confirm="handleEditConfirm"
+      />
       
       <!-- 表格区 -->
-  <el-table :data="pagedTableData" class="model-table" border>
+  <el-table :data="pagedTableData" class="model-table hc-panel" border stripe highlight-current-row>
   <el-table-column prop="id" label="ID" width="60" align="center" header-align="center" />
   <el-table-column prop="name" label="名称" width="120" align="center" header-align="center" />
   <el-table-column prop="category" label="类别" width="80" align="center" header-align="center" />
@@ -88,9 +93,15 @@ ModelList.vue
   <el-table-column prop="address" label="主址" width="120" align="center" header-align="center" />
   <el-table-column prop="quantity" label="数量" width="60" align="center" header-align="center" />
   <el-table-column prop="image_path" label="图片路径" min-width="150" align="center" header-align="center" />
-  <el-table-column label="操作" width="120" align="center" header-align="center">
+  <el-table-column prop="render_path" label="渲染图路径" min-width="150" align="center" header-align="center" />
+  <el-table-column prop="model_path" label="模型文件路径" min-width="180" align="center" header-align="center" />
+  <el-table-column prop="create_time" label="创建时间" width="160" align="center" header-align="center" :formatter="formatDate" />
+  <el-table-column prop="update_time" label="更新时间" width="160" align="center" header-align="center" :formatter="formatDate" />
+  <el-table-column label="操作" width="200" align="center" header-align="center">
           <template #default="scope">
             <el-button size="small" @click="handleView(scope.$index, scope.row)">详情</el-button>
+            <el-button size="small" type="primary" @click="openEdit(scope.row)">编辑</el-button>
+            <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -117,6 +128,7 @@ import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { modelAPI } from '../api/index.js';
 import ModelUploadDialog from '../components/ModelUploadDialog.vue';
+import ModelEditDialog from '../components/ModelEditDialog.vue';
 
 const fileInput = ref(null);
 const triggerFileInput = () => {
@@ -129,6 +141,8 @@ const triggerFileInput = () => {
 
 // 控制弹窗显示
 const uploadDialogVisible = ref(false);
+const editDialogVisible = ref(false);
+const editingModel = ref(null);
 const selectedFile = ref(null);
 const fileName = ref('');
 
@@ -177,8 +191,14 @@ const handleUploadConfirm = async (modelInfo) => {
     console.log('文件上传成功:', response.data);
     ElMessage.success(`文件上传成功: ${selectedFile.value.name}`);
     
-    // 重新加载数据
-    fetchData();
+    // 将新建记录直接插入表格数据，提升即时反馈
+    if (response.data && response.data.model) {
+      tableData.value = [response.data.model, ...tableData.value];
+      total.value = (total.value || 0) + 1;
+    } else {
+      // 回退：重新拉取列表
+      fetchData();
+    }
     
     // 上传成功后重置状态
     resetUploadState();
@@ -266,6 +286,21 @@ const handlePageChange = (page) => {
   fetchData();
 };
 
+// 轻量时间格式化（yyyy-MM-dd HH:mm）
+const formatDate = (row, column, cellValue) => {
+  const v = cellValue || row[column.property];
+  if (!v) return '';
+  try {
+    // 支持 Date 或 ISO 字符串
+    const d = typeof v === 'string' ? new Date(v) : v;
+    if (Number.isNaN(d.getTime())) return v;
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  } catch {
+    return v;
+  }
+};
+
 // 组件挂载时获取数据
 onMounted(() => {
   fetchData();
@@ -274,6 +309,34 @@ onMounted(() => {
 // 查看详情的点击事件，会跳转到对应的模型详情页
 const handleView = (index, row) => {
   router.push(`/model/${row.id}`);
+};
+
+// 打开编辑
+const openEdit = (row) => {
+  editingModel.value = { ...row };
+  editDialogVisible.value = true;
+};
+
+// 编辑确认
+const handleEditConfirm = async (data) => {
+  try {
+    await modelAPI.updateModel(data.id, data);
+    ElMessage.success('更新成功');
+    fetchData();
+  } catch (e) {
+    ElMessage.error('更新失败');
+  }
+};
+
+// 删除
+const handleDelete = async (row) => {
+  try {
+    await modelAPI.deleteModel(row.id);
+    ElMessage.success('删除成功');
+    fetchData();
+  } catch (e) {
+    ElMessage.error('删除失败');
+  }
 };
 
 </script>

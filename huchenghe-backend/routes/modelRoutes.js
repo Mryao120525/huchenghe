@@ -164,7 +164,8 @@ router.get('/', async (req, res) => {
     const parsedPageSize = Math.max(1, Math.min(100, parseInt(pageSize, 10) || 10)); // 限制最大页面大小为100
     const offset = (parsedPage - 1) * parsedPageSize;
     
-    let sql = 'SELECT id, model_code, name, category, area, address, quantity, image_path, render_path, model_path, remark, create_time, update_time FROM models WHERE 1=1';
+    // 为兼容旧/新字段，先 SELECT * 再在Node侧统一映射为下划线字段
+    let sql = 'SELECT * FROM models WHERE 1=1';
     const params = [];
     
     // 名称筛选
@@ -179,15 +180,29 @@ router.get('/', async (req, res) => {
       params.push(type);
     }
     
-    // 添加分页 - 确保参数是整数
-    sql += ' LIMIT ?, ?';
-    params.push(offset, parsedPageSize);
+    // 添加分页 - 某些 MySQL 版本对 LIMIT 占位符支持不佳，这里内联安全整数以避免执行错误
+    sql += ` LIMIT ${Number(offset)} , ${Number(parsedPageSize)}`;
     
     console.log('执行SQL查询:', sql);
     console.log('查询参数:', params);
     
     const [results] = await pool.execute(sql, params);
-    res.json(results);
+    const mapped = results.map((row) => ({
+      id: row.id,
+      model_code: row.model_code,
+      name: row.name,
+      category: row.category,
+      area: row.area ?? row.region ?? null,
+      address: row.address,
+      quantity: row.quantity,
+      image_path: row.image_path ?? row.image_url ?? null,
+      render_path: row.render_path ?? row.render_url ?? null,
+      model_path: row.model_path ?? row.nas_path ?? null,
+      remark: row.remark ?? null,
+      create_time: row.create_time ?? row.created_at ?? null,
+      update_time: row.update_time ?? row.updated_at ?? null,
+    }));
+    res.json(mapped);
   } catch (err) {
     console.error('模型查询失败:', err);
     res.status(500).json({ message: '查询失败', error: err.message });
@@ -225,11 +240,27 @@ router.get('/count', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const [results] = await pool.execute('SELECT id, model_code, name, category, area, address, quantity, image_path, render_path, model_path, remark, create_time, update_time FROM models WHERE id = ?', [id]);
+    const [results] = await pool.execute('SELECT * FROM models WHERE id = ?', [id]);
     if (results.length === 0) {
       return res.status(404).json({ message: '未找到模型' });
     }
-    res.json(results[0]);
+    const row = results[0];
+    const mapped = {
+      id: row.id,
+      model_code: row.model_code,
+      name: row.name,
+      category: row.category,
+      area: row.area ?? row.region ?? null,
+      address: row.address,
+      quantity: row.quantity,
+      image_path: row.image_path ?? row.image_url ?? null,
+      render_path: row.render_path ?? row.render_url ?? null,
+      model_path: row.model_path ?? row.nas_path ?? null,
+      remark: row.remark ?? null,
+      create_time: row.create_time ?? row.created_at ?? null,
+      update_time: row.update_time ?? row.updated_at ?? null,
+    };
+    res.json(mapped);
   } catch (err) {
     console.error('模型详情查询失败:', err);
     res.status(500).json({ message: '查询失败', error: err.message });
@@ -289,11 +320,28 @@ router.post('/upload', upload.single('modelFile'), async (req, res) => {
     );
     
     console.log('数据库插入成功，ID:', result.insertId);
+    // 查询完整新建记录，统一下划线字段返回
+    const [rows] = await pool.execute('SELECT * FROM models WHERE id = ?', [result.insertId]);
+    const createdModel = rows && rows[0]
+      ? {
+          id: rows[0].id,
+          model_code: rows[0].model_code,
+          name: rows[0].name,
+          category: rows[0].category,
+          area: rows[0].area ?? rows[0].region ?? null,
+          address: rows[0].address,
+          quantity: rows[0].quantity,
+          image_path: rows[0].image_path ?? rows[0].image_url ?? null,
+          render_path: rows[0].render_path ?? rows[0].render_url ?? null,
+          model_path: rows[0].model_path ?? rows[0].nas_path ?? null,
+          remark: rows[0].remark ?? null,
+          create_time: rows[0].create_time ?? rows[0].created_at ?? null,
+          update_time: rows[0].update_time ?? rows[0].updated_at ?? null,
+        }
+      : null;
     res.json({ 
       message: '模型上传成功', 
-      modelId: result.insertId,
-      modelCode: modelCode,
-      filePath: filePath
+      model: createdModel
     });
   } catch (error) {
     console.error('文件上传失败:', error);
