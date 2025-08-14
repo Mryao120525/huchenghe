@@ -150,7 +150,7 @@ router.post('/add-sample', async (req, res) => {
     res.json({ message: '示例数据添加成功', modelId: result.insertId });
   } catch (error) {
     console.error('添加示例数据时出错:', error);
-    res.status(500).json({ message: '添加示例数据失败', error: error.message });
+    res.status(500).json({ message: '添加示例数据失败', code: error.code, errno: error.errno, error: error.message });
   }
 });
 
@@ -205,7 +205,7 @@ router.get('/', async (req, res) => {
     res.json(mapped);
   } catch (err) {
     console.error('模型查询失败:', err);
-    res.status(500).json({ message: '查询失败', error: err.message });
+    res.status(500).json({ message: '查询失败', code: err.code, errno: err.errno, error: err.message });
   }
 });
 
@@ -232,7 +232,7 @@ router.get('/count', async (req, res) => {
     res.json(results[0]);
   } catch (err) {
     console.error('模型总数查询失败:', err);
-    res.status(500).json({ message: '查询失败', error: err.message });
+    res.status(500).json({ message: '查询失败', code: err.code, errno: err.errno, error: err.message });
   }
 });
 
@@ -263,7 +263,7 @@ router.get('/:id', async (req, res) => {
     res.json(mapped);
   } catch (err) {
     console.error('模型详情查询失败:', err);
-    res.status(500).json({ message: '查询失败', error: err.message });
+    res.status(500).json({ message: '查询失败', code: err.code, errno: err.errno, error: err.message });
   }
 });
 
@@ -354,7 +354,7 @@ router.post('/upload', upload.single('modelFile'), async (req, res) => {
     } else if (error.code === 'ER_DUP_ENTRY') {
       errorMessage = '模型编码重复，请重试';
     }
-    res.status(500).json({ message: errorMessage, error: error.message, code: error.code });
+    res.status(500).json({ message: errorMessage, error: error.message, code: error.code, errno: error.errno });
   }
 });
 
@@ -384,7 +384,7 @@ router.put('/:id', async (req, res) => {
     res.json({ message: '模型更新成功' });
   } catch (error) {
     console.error('更新模型失败:', error);
-    res.status(500).json({ message: '更新失败', error: error.message });
+    res.status(500).json({ message: '更新失败', code: error.code, errno: error.errno, error: error.message });
   }
 });
 
@@ -399,7 +399,7 @@ router.delete('/:id', async (req, res) => {
     res.json({ message: '模型删除成功' });
   } catch (err) {
     console.error('模型删除失败:', err);
-    res.status(500).json({ message: '删除失败', error: err.message });
+    res.status(500).json({ message: '删除失败', code: err.code, errno: err.errno, error: err.message });
   }
 });
 

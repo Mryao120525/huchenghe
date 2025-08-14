@@ -18,7 +18,7 @@ router.get('/', async (req, res) => {
     res.json(users);
   } catch (error) {
     console.error('获取用户列表失败:', error);
-    res.status(500).json({ message: '获取用户列表失败' });
+    res.status(500).json({ message: '获取用户列表失败', code: error.code, errno: error.errno, error: error.message });
   }
 });
 
@@ -32,7 +32,7 @@ router.get('/:id', async (req, res) => {
     res.json(users[0]);
   } catch (error) {
     console.error('获取用户失败:', error);
-    res.status(500).json({ message: '获取用户失败' });
+    res.status(500).json({ message: '获取用户失败', code: error.code, errno: error.errno, error: error.message });
   }
 });
 
@@ -60,7 +60,7 @@ router.post('/', async (req, res) => {
     res.status(201).json({ message: '用户创建成功', userId: result.insertId });
   } catch (error) {
     console.error('创建用户失败:', error);
-    res.status(500).json({ message: '创建用户失败' });
+    res.status(500).json({ message: '创建用户失败', code: error.code, errno: error.errno, error: error.message });
   }
 });
 
@@ -85,7 +85,7 @@ router.put('/:id', async (req, res) => {
     res.json({ message: '用户更新成功' });
   } catch (error) {
     console.error('更新用户失败:', error);
-    res.status(500).json({ message: '更新用户失败' });
+    res.status(500).json({ message: '更新用户失败', code: error.code, errno: error.errno, error: error.message });
   }
 });
 
@@ -105,7 +105,7 @@ router.delete('/:id', async (req, res) => {
     res.json({ message: '用户删除成功' });
   } catch (error) {
     console.error('删除用户失败:', error);
-    res.status(500).json({ message: '删除用户失败' });
+    res.status(500).json({ message: '删除用户失败', code: error.code, errno: error.errno, error: error.message });
   }
 });
 

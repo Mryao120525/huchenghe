@@ -42,6 +42,7 @@ const path = require('path');                 // 路径处理模块
 const modelRoutes = require('./routes/modelRoutes'); // 引入模型相关路由模块
 const loginRoutes = require('./routes/loginRoutes'); // 引入登录相关路由模块
 const userRoutes = require('./routes/userRoutes'); // 引入用户管理路由模块
+const db = require('./db'); // 引入数据库以进行健康检查
 
 // 创建Express应用实例
 const app = express();
@@ -114,12 +115,22 @@ app.use((req, res, next) => {
 
 // 注册路由
 app.use('/api/models', modelRoutes); // 挂载模型相关API路由到/api/models路径下
+app.use('/api/auth', loginRoutes); // 挂载登录相关API路由到/api/auth路径下
 app.use('/api/users', userRoutes); // 挂载用户管理API路由到/api/users路径下
-app.use('/api', loginRoutes); // 挂载登录相关API路由到/api路径下
 
 // 添加根路径路由用于健康检查
 app.get('/', (req, res) => {
   res.json({ message: '护橙河三维模型管理系统后端服务运行正常' });
+});
+
+// 数据库健康检查
+app.get('/api/health/db', async (req, res) => {
+  try {
+    const [rows] = await db.query('SELECT 1 as ok');
+    res.json({ ok: true, result: rows && rows[0] });
+  } catch (err) {
+    res.status(500).json({ ok: false, code: err.code, errno: err.errno, message: err.message });
+  }
 });
 
 // 添加错误处理中间件
@@ -139,7 +150,7 @@ app.use((err, req, res, next) => {
       return res.status(400).json({ message: '文件大小超出限制' });
     }
   }
-  res.status(500).json({ message: '服务器内部错误', error: err.message });
+  res.status(500).json({ message: '服务器内部错误', error: err.message, code: err.code });
 });
 
 // 404处理
@@ -158,6 +169,14 @@ const server = app.listen(PORT, () => {
   console.log(`Server is running at http://localhost:${PORT}`);
 }).on('error', (err) => {
   console.error('Failed to start server:', err);
+});
+
+// 捕获未处理的异常与未处理的Promise拒绝，确保错误能被看到
+process.on('uncaughtException', (err) => {
+  console.error('未捕获异常:', err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('未处理的Promise拒绝:', reason);
 });
 
 module.exports = server;

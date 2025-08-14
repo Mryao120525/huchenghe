@@ -112,7 +112,7 @@ const userFormRules = {
 // 获取用户列表
 const fetchUsers = async () => {
   try {
-    const response = await axios.get('http://localhost:3000/api/users')
+    const response = await axios.get('https://api.example.com/v1/users')
     userList.value = response.data
   } catch (error) {
     ElMessage.error('获取用户列表失败')
@@ -163,7 +163,7 @@ const saveUser = async () => {
         email: userForm.email
       });
       
-      const response = await axios.put(`http://localhost:3000/api/users/${editingUser.value.id}`, {
+      const response = await axios.put(`https://api.example.com/v1/users/${editingUser.value.id}`, {
         username: userForm.username,
         phone: userForm.phone,
         role: userForm.role,
@@ -180,7 +180,7 @@ const saveUser = async () => {
         password: userForm.password
       });
       
-      const response = await axios.post('http://localhost:3000/api/users', {
+      const response = await axios.post('https://api.example.com/v1/users', {
         username: userForm.username,
         phone: userForm.phone,
         role: userForm.role,
@@ -212,7 +212,7 @@ const deleteUser = (id) => {
     type: 'warning'
   }).then(async () => {
     try {
-      await axios.delete(`http://localhost:3000/api/users/${id}`)
+      await axios.delete(`https://api.example.com/v1/users/${id}`)
       ElMessage.success('用户删除成功')
       fetchUsers() // 重新获取用户列表
     } catch (error) {
@@ -228,35 +228,3 @@ const deleteUser = (id) => {
 onMounted(() => {
   fetchUsers()
 })
-</script>
-
-<style scoped>
-.user-admin-container {
-  min-height: 100vh;
-  background: #f7f8fa;
-}
-.user-admin-header {
-  background: linear-gradient(270deg, #4f8cff, #6ee7b7, #fbbf24, #f87171, #4f8cff);
-  background-size: 1000% 100%;
-  animation: gradientMove 8s ease-in-out infinite;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 64px;
-  color: #fff;
-  font-size: 24px;
-  font-weight: bold;
-  letter-spacing: 2px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-}
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-@keyframes gradientMove {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-</style>

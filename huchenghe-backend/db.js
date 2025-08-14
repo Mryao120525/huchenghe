@@ -80,4 +80,20 @@ const pool = mysql.createPool({
 // 使用 Promise 形式
 const promisePool = pool.promise();
 
+// 监听连接池错误，便于在数据库不可用时快速定位
+try {
+  if (typeof pool.on === 'function') {
+    pool.on('error', (err) => {
+      console.error('数据库连接池错误:', err);
+    });
+  }
+} catch (_) {}
+
+// 启动时进行一次数据库连通性检查，并把错误详细输出
+promisePool.query('SELECT 1').then(() => {
+  console.log('数据库连接检查通过');
+}).catch((err) => {
+  console.error('数据库连接检查失败:', { code: err.code, errno: err.errno, message: err.message });
+});
+
 module.exports = promisePool;

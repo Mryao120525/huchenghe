@@ -25,7 +25,9 @@ Login.vue
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { authAPI } from '../api/index.js';
+import axios from 'axios';
+import { ElMessage } from 'element-plus';
+import { authAPI } from '@/api';
 const router = useRouter();
 // 设置默认手机号和密码（可改为空串以防泄露测试账号）
 const form = ref({ username: '', password: '' });

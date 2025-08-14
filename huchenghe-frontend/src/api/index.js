@@ -59,7 +59,7 @@ export const modelAPI = {
 export const authAPI = {
   // 用户登录
   login(credentials) {
-    return api.post('/login', credentials);
+    return api.post('/auth/login', credentials);
   }
 };
 

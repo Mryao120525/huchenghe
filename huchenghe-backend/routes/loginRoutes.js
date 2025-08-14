@@ -67,6 +67,14 @@ const bcrypt = require('bcryptjs');
  * @returns {Object} { success: boolean, message: string, user: Object }
  * @throws {500} 数据库错误
  */
+/**
+ * 用户登录接口
+ * @route POST /api/auth/login
+ * @body {string} username - 用户名/手机号
+ * @body {string} password - 密码
+ * @returns {Object} { success: boolean, message: string, user: Object }
+ * @throws {500} 数据库错误
+ */
 router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -111,7 +119,7 @@ router.post('/login', async (req, res) => {
     return res.json({ success: true, message: '登录成功', user: safeUser });
   } catch (err) {
     console.error('登录查询失败:', err);
-    return res.json({ success: false, message: '数据库错误' });
+    return res.json({ success: false, message: '数据库错误', code: err.code, errno: err.errno, error: err.message });
   }
 });
 
@@ -126,7 +134,7 @@ router.get('/users', (req, res) => {
   pool.execute('SELECT id, username, phone, role, email FROM user', (err, results) => {
     if (err) {
       console.error('查询用户列表失败:', err);
-      return res.status(500).json({ message: '查询失败' });
+      return res.status(500).json({ message: '查询失败', code: err.code, errno: err.errno, error: err.message });
     }
     console.log('成功获取用户列表，用户数量:', results.length);
     res.json(results);
@@ -163,13 +171,13 @@ router.post('/users', (req, res) => {
     'INSERT INTO user (username, phone, role, email, password) VALUES (?, ?, ?, ?, ?)',
     [username, phone, role, email, userPassword],
     (err, results) => {
-      if (err) {
-        console.error('添加用户失败:', err);
-        if (err.code === 'ER_DUP_ENTRY') {
-          return res.status(400).json({ message: '手机号已存在，请使用其他手机号' });
+        if (err) {
+          console.error('添加用户失败:', err);
+          if (err.code === 'ER_DUP_ENTRY') {
+            return res.status(400).json({ message: '手机号已存在，请使用其他手机号', code: err.code });
+          }
+          return res.status(500).json({ message: '添加用户失败', code: err.code, errno: err.errno, error: err.message });
         }
-        return res.status(500).json({ message: '添加用户失败: ' + err.message });
-      }
       console.log('用户添加成功:', results.insertId);
       res.json({ message: '用户添加成功', userId: results.insertId });
     }
@@ -207,9 +215,9 @@ router.put('/users/:id', (req, res) => {
       if (err) {
         console.error('更新用户失败:', err);
         if (err.code === 'ER_DUP_ENTRY') {
-          return res.status(400).json({ message: '手机号已存在，请使用其他手机号' });
+          return res.status(400).json({ message: '手机号已存在，请使用其他手机号', code: err.code });
         }
-        return res.status(500).json({ message: '更新用户失败: ' + err.message });
+        return res.status(500).json({ message: '更新用户失败', code: err.code, errno: err.errno, error: err.message });
       }
       if (results.affectedRows === 0) {
         console.log('用户不存在:', id);
@@ -233,7 +241,7 @@ router.delete('/users/:id', (req, res) => {
   const { id } = req.params;
   
   pool.execute('DELETE FROM user WHERE id = ?', [id], (err, results) => {
-    if (err) return res.status(500).json({ message: '删除用户失败' });
+    if (err) return res.status(500).json({ message: '删除用户失败', code: err.code, errno: err.errno, error: err.message });
     if (results.affectedRows === 0) {
       return res.status(404).json({ message: '用户不存在' });
     }
