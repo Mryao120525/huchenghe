@@ -42,6 +42,7 @@ const path = require('path');                 // 路径处理模块
 const modelRoutes = require('./routes/modelRoutes'); // 引入模型相关路由模块
 const loginRoutes = require('./routes/loginRoutes'); // 引入登录相关路由模块
 const userRoutes = require('./routes/userRoutes'); // 引入用户管理路由模块
+const storageRoutes = require('./routes/storageRoutes'); // 引入存储空间管理路由模块
 const db = require('./db'); // 引入数据库以进行健康检查
 
 // 创建Express应用实例
@@ -117,6 +118,7 @@ app.use((req, res, next) => {
 app.use('/api/models', modelRoutes); // 挂载模型相关API路由到/api/models路径下
 app.use('/api/auth', loginRoutes); // 挂载登录相关API路由到/api/auth路径下
 app.use('/api/users', userRoutes); // 挂载用户管理API路由到/api/users路径下
+app.use('/api/storage', storageRoutes); // 挂载存储空间管理API路由到/api/storage路径下
 
 // 添加根路径路由用于健康检查
 app.get('/', (req, res) => {

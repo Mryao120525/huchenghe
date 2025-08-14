@@ -39,6 +39,7 @@ const adminFeatures = [
   { feature: '用户管理', desc: '添加、编辑、删除用户账号，分配权限' },
   { feature: '模型审核', desc: '审核用户上传的三维模型，控制发布' },
   { feature: '模型管理', desc: '对所有模型进行增删改查、批量操作' },
+  { feature: '存储空间管理', desc: '监控存储空间使用情况，清理文件，管理存储设置' },
   { feature: '系统设置', desc: '平台基础配置、公告、参数设置' },
   { feature: '日志管理', desc: '查看操作日志、系统日志，便于追踪问题' },
   { feature: '数据统计', desc: '查看模型数量、用户活跃度等统计报表' },
@@ -49,6 +50,8 @@ const goFeature = (feature) => {
   // 跳转到对应功能页面（占位页）
   if (feature === '用户管理') {
     router.push('/admin/用户管理');
+  } else if (feature === '存储空间管理') {
+    router.push('/storage-management');
   } else {
     router.push(`/admin/${encodeURIComponent(feature)}`);
   }

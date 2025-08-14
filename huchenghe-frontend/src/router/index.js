@@ -71,6 +71,13 @@ const routes = [
     path: '/test-connection',
     name: 'TestConnection',
     component: () => import('../views/TestConnection.vue')
+  },
+  // 存储空间管理页面
+  {
+    path: '/storage-management',
+    name: 'StorageManagement',
+    component: () => import('../views/StorageManagement.vue'),
+    meta: { requiresAuth: true }
   }
 ];
 

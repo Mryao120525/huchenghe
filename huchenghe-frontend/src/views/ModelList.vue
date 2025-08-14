@@ -60,24 +60,41 @@ ModelList.vue
           <el-option label="造像" value="造像" />
           <el-option label="其他" value="其他" />
         </el-select>
-        <div class="upload-btn" style="display: flex; align-items: center;">
-          <el-button type="success" @click="triggerFileInput">上传模型</el-button>
-          <input 
-            ref="fileInput" 
-            type="file" 
-            style="display: none;" 
-            @change="handleFileUpload" 
-            accept=".fbx,.obj,.stl,.gltf,.glb,.dae,.ply,.3ds,.max,.blend,.mtl,.ase,.ifc,.flt,.wrl,.wrz,.dxf,.dgn,.pdb,.ms3d,.mdl,.md2,.md3,.pk3,.md5,.smd,.vta,.dmx,.bvh,.biovision,.ac,.acc,.ac3d,.mesh,.xml,.osg,.osgt,.osgb,.osg2,.txp,.ive,.logo,.lwo,.lws,.ma,.mb,.abc,.hpb,.scn,.irr,.irrmesh,.q3o,.q3s" />
+        <div class="upload-btn" style="display: flex; align-items: center; gap: 8px;">
+          <el-button type="success" @click="uploadDialogVisible = true">上传模型</el-button>
+          <el-button type="warning" @click="batchUploadDialogVisible = true">批量上传</el-button>
         </div>
       </div>
       <el-divider />
       
+      <!-- 批量操作工具栏 -->
+      <BatchOperations
+        :selected-items="selectedItems"
+        @batch-delete="handleBatchDelete"
+        @batch-export="handleBatchExport"
+        @batch-download="handleBatchDownload"
+        @clear-selection="clearSelection"
+      />
+
       <!-- 模型上传信息填写弹窗 -->
       <ModelUploadDialog 
         v-model:visible="uploadDialogVisible"
-        :file-name="fileName"
         @confirm="handleUploadConfirm"
       />
+      
+      <!-- 批量上传对话框 -->
+      <BatchUploadDialog
+        v-model:visible="batchUploadDialogVisible"
+        @batch-upload-complete="handleBatchUploadComplete"
+      />
+      
+      <!-- 批量下载对话框 -->
+      <BatchDownload
+        v-model:visible="batchDownloadDialogVisible"
+        @download-complete="handleDownloadComplete"
+        @download-error="handleDownloadError"
+      />
+      
       <ModelEditDialog
         v-model:visible="editDialogVisible"
         :model="editingModel"
@@ -85,7 +102,16 @@ ModelList.vue
       />
       
       <!-- 表格区 -->
-  <el-table :data="pagedTableData" class="model-table hc-panel" border stripe highlight-current-row>
+  <el-table 
+    ref="tableRef"
+    :data="pagedTableData" 
+    class="model-table hc-panel" 
+    border 
+    stripe 
+    highlight-current-row
+    @selection-change="handleSelectionChange"
+  >
+  <el-table-column type="selection" width="55" align="center" />
   <el-table-column prop="id" label="ID" width="60" align="center" header-align="center" />
   <el-table-column prop="name" label="名称" width="120" align="center" header-align="center" />
   <el-table-column prop="category" label="类别" width="80" align="center" header-align="center" />
@@ -129,56 +155,45 @@ import { ElMessage } from 'element-plus';
 import { modelAPI } from '../api/index.js';
 import ModelUploadDialog from '../components/ModelUploadDialog.vue';
 import ModelEditDialog from '../components/ModelEditDialog.vue';
-
-const fileInput = ref(null);
-const triggerFileInput = () => {
-  // 确保先重置状态再触发点击
-  if (fileInput.value) {
-    fileInput.value.value = null;
-    fileInput.value.click();
-  }
-};
+import BatchUploadDialog from '../components/BatchUploadDialog.vue';
+import BatchOperations from '../components/BatchOperations.vue';
+import BatchDownload from '../components/BatchDownload.vue';
+import { exportData } from '../utils/exportUtils';
+import { batchDownload, downloadAsZip, generateDownloadFilename } from '../utils/downloadUtils';
 
 // 控制弹窗显示
 const uploadDialogVisible = ref(false);
+const batchUploadDialogVisible = ref(false);
+const batchDownloadDialogVisible = ref(false);
 const editDialogVisible = ref(false);
 const editingModel = ref(null);
-const selectedFile = ref(null);
-const fileName = ref('');
+
+// 批量操作相关
+const selectedItems = ref([]);
 
 // 名称筛选
 const filterName = ref("");
 
-// 上传模型文件事件
-const handleFileUpload = (event) => {
-  const file = event.target.files[0];
-  if (file) {
-    selectedFile.value = file;
-    fileName.value = file.name;
-    // 显示信息填写弹窗
-    uploadDialogVisible.value = true;
-    // 重置文件输入元素值，允许重复选择相同文件
-    event.target.value = null;
-  }
-};
-
 // 处理弹窗确认事件
 const handleUploadConfirm = async (modelInfo) => {
-  if (!selectedFile.value) return;
+  if (!modelInfo.file) {
+    ElMessage.error('请先选择要上传的模型文件');
+    return;
+  }
   
   // 创建FormData对象用于文件上传
   const formData = new FormData();
-  formData.append('modelFile', selectedFile.value);
+  formData.append('modelFile', modelInfo.file);
   formData.append('name', modelInfo.name);
   formData.append('category', modelInfo.category);
   formData.append('area', modelInfo.area);
   formData.append('address', modelInfo.address);
   formData.append('quantity', modelInfo.quantity);
   
-  // 设置默认路径，如果用户没有输入的话
-  const defaultImagePath = modelInfo.image_path || `/images/${modelInfo.name}.jpg`;
-  const defaultRenderPath = modelInfo.render_path || `/renders/${modelInfo.name}.png`;
-  const defaultModelPath = modelInfo.model_path || `/models/${selectedFile.value.name}`;
+  // 设置默认路径
+  const defaultImagePath = `/images/${modelInfo.name}.jpg`;
+  const defaultRenderPath = `/renders/${modelInfo.name}.png`;
+  const defaultModelPath = `/models/${modelInfo.fileName}`;
   
   formData.append('image_path', defaultImagePath);
   formData.append('render_path', defaultRenderPath);
@@ -189,7 +204,7 @@ const handleUploadConfirm = async (modelInfo) => {
     // 调用后端API上传文件
     const response = await modelAPI.createModel(formData);
     console.log('文件上传成功:', response.data);
-    ElMessage.success(`文件上传成功: ${selectedFile.value.name}`);
+    ElMessage.success(`文件上传成功: ${modelInfo.fileName}`);
     
     // 将新建记录直接插入表格数据，提升即时反馈
     if (response.data && response.data.model) {
@@ -220,14 +235,183 @@ const handleUploadConfirm = async (modelInfo) => {
 // 添加重置上传状态的方法
 const resetUploadState = () => {
   uploadDialogVisible.value = false;
-  selectedFile.value = null;
-  fileName.value = '';
-  // 重置文件输入元素
-  if (fileInput.value) {
-    fileInput.value.value = null;
+};
+
+// 处理表格选择变化
+const handleSelectionChange = (selection) => {
+  selectedItems.value = selection;
+};
+
+// 清除选择
+const clearSelection = () => {
+  selectedItems.value = [];
+  // 清除表格选择状态
+  if (tableRef.value) {
+    tableRef.value.clearSelection();
+  }
+};
+
+// 批量删除
+const handleBatchDelete = async (items) => {
+  try {
+    const ids = items.map(item => item.id);
+    await Promise.all(ids.map(id => modelAPI.deleteModel(id)));
+    
+    ElMessage.success(`成功删除 ${items.length} 个模型`);
+    
+    // 重新获取数据
+    await fetchData();
+    
+    // 清除选择
+    clearSelection();
+  } catch (error) {
+    console.error('批量删除失败:', error);
+    ElMessage.error('批量删除失败: ' + error.message);
+  }
+};
+
+// 批量导出
+const handleBatchExport = async (exportInfo) => {
+  try {
+    const { items, options } = exportInfo;
+    await exportData(items, options);
+  } catch (error) {
+    console.error('批量导出失败:', error);
+    ElMessage.error('批量导出失败: ' + error.message);
+  }
+};
+
+// 批量下载
+const handleBatchDownload = async (downloadInfo) => {
+  try {
+    const { items, options } = downloadInfo;
+    
+    // 准备下载文件列表
+    const downloadFiles = [];
+    
+    items.forEach(item => {
+      // 根据选择的文件类型添加文件
+      if (options.fileTypes.includes('model') && item.model_path) {
+        downloadFiles.push({
+          url: item.model_path,
+          filename: generateDownloadFilename(
+            item.model_path.split('/').pop() || `${item.name}.fbx`,
+            options.naming === 'prefix' ? options.prefix : '',
+            options.naming === 'suffix' ? options.suffix : ''
+          ),
+          size: 0 // 实际应用中应该从服务器获取文件大小
+        });
+      }
+      
+      if (options.fileTypes.includes('image') && item.image_path) {
+        downloadFiles.push({
+          url: item.image_path,
+          filename: generateDownloadFilename(
+            item.image_path.split('/').pop() || `${item.name}.jpg`,
+            options.naming === 'prefix' ? options.prefix : '',
+            options.naming === 'suffix' ? options.suffix : ''
+          ),
+          size: 0
+        });
+      }
+      
+      if (options.fileTypes.includes('render') && item.render_path) {
+        downloadFiles.push({
+          url: item.render_path,
+          filename: generateDownloadFilename(
+            item.render_path.split('/').pop() || `${item.name}_render.png`,
+            options.naming === 'prefix' ? options.prefix : '',
+            options.naming === 'suffix' ? options.suffix : ''
+          ),
+          size: 0
+        });
+      }
+    });
+    
+    if (downloadFiles.length === 0) {
+      ElMessage.warning('没有找到可下载的文件');
+      return;
+    }
+    
+    // 根据下载方式执行下载
+    if (options.method === 'zip') {
+      // 打包下载
+      await downloadAsZip(downloadFiles, options.zipName);
+      ElMessage.success('ZIP文件下载完成');
+    } else {
+      // 单独下载
+      batchDownloadDialogVisible.value = true;
+      // 这里可以调用实际的批量下载逻辑
+      // 目前只是显示对话框
+    }
+  } catch (error) {
+    console.error('批量下载失败:', error);
+    ElMessage.error('批量下载失败: ' + error.message);
+  }
+};
+
+// 处理下载完成
+const handleDownloadComplete = (files) => {
+  ElMessage.success(`成功下载 ${files.length} 个文件`);
+  batchDownloadDialogVisible.value = false;
+};
+
+// 处理下载错误
+const handleDownloadError = (error) => {
+  ElMessage.error('下载失败: ' + error.message);
+  batchDownloadDialogVisible.value = false;
+};
+
+// 批量上传完成
+const handleBatchUploadComplete = async (files) => {
+  try {
+    let successCount = 0;
+    let errorCount = 0;
+    
+    for (const file of files) {
+      try {
+        // 创建FormData对象用于文件上传
+        const formData = new FormData();
+        formData.append('modelFile', file.file);
+        formData.append('name', file.modelName);
+        formData.append('category', file.category);
+        formData.append('area', file.area);
+        formData.append('address', file.address);
+        formData.append('quantity', file.quantity);
+        
+        // 设置默认路径
+        const defaultImagePath = `/images/${file.modelName}.jpg`;
+        const defaultRenderPath = `/renders/${file.modelName}.png`;
+        const defaultModelPath = `/models/${file.name}`;
+        
+        formData.append('image_path', defaultImagePath);
+        formData.append('render_path', defaultRenderPath);
+        formData.append('model_path', defaultModelPath);
+        formData.append('remark', file.remark);
+        
+        // 调用后端API上传文件
+        const response = await modelAPI.createModel(formData);
+        successCount++;
+      } catch (error) {
+        console.error(`文件 ${file.name} 上传失败:`, error);
+        errorCount++;
+      }
+    }
+    
+    if (successCount > 0) {
+      ElMessage.success(`批量上传完成：成功 ${successCount} 个，失败 ${errorCount} 个`);
+      // 重新获取数据
+      await fetchData();
+    } else {
+      ElMessage.error('批量上传失败');
+    }
+  } catch (error) {
+    console.error('批量上传失败:', error);
+    ElMessage.error('批量上传失败: ' + error.message);
   }
 };
 const router = useRouter();
+const tableRef = ref(null);
 const filterType = ref('all');
 
 const pageSize = 10;
