@@ -1,9 +1,10 @@
 import axios from 'axios';
+import { getApiBaseURL } from './config.js';
 
 // 创建axios实例
 const api = axios.create({
-  baseURL: 'http://localhost:3000/api',
-  timeout: 5000
+  baseURL: getApiBaseURL(),
+  timeout: 10000 // 增加超时时间，适应网络环境
 });
 
 // 添加请求拦截器，处理文件上传

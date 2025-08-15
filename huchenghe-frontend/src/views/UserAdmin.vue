@@ -228,3 +228,4 @@ const deleteUser = (id) => {
 onMounted(() => {
   fetchUsers()
 })
+</script>

@@ -41,9 +41,20 @@ const routes = [
     component: () => import('../views/Login.vue')
   },
   {
+    path: '/mobile/login',
+    name: 'MobileLoginPage',
+    component: () => import('../views/MobileLogin.vue')
+  },
+  {
     path: '/models',
     name: 'ModelList',
     component: ModelList,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/mobile/models',
+    name: 'MobileModelList',
+    component: () => import('../views/MobileModelList.vue'),
     meta: { requiresAuth: true }
   },
   {
@@ -72,6 +83,12 @@ const routes = [
     name: 'TestConnection',
     component: () => import('../views/TestConnection.vue')
   },
+  // 移动端测试页面
+  {
+    path: '/mobile-test',
+    name: 'MobileTest',
+    component: () => import('../views/MobileTest.vue')
+  },
   // 存储空间管理页面
   {
     path: '/storage-management',
@@ -86,9 +103,19 @@ const router = createRouter({
   routes
 });
 
+import { shouldUseMobileView } from '../utils/deviceDetection.js';
+
 // 简易路由守卫：基于 localStorage 标记是否登录
 router.beforeEach((to, from, next) => {
   const isAuthed = !!localStorage.getItem('hc_authed');
+  
+  // 检查是否需要移动端跳转
+  if (shouldUseMobileView() && !to.path.startsWith('/mobile') && to.path !== '/login') {
+    const mobilePath = to.path.replace(/^\//, '/mobile/');
+    next(mobilePath);
+    return;
+  }
+  
   if (to.meta && to.meta.requiresAuth && !isAuthed) {
     next('/login');
   } else if (to.path === '/login' && isAuthed) {

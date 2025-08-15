@@ -3,11 +3,11 @@
  * 提供存储空间监控、文件管理、空间清理等功能
  */
 
-import request from './request';
+import api from './index.js';
 
 // 存储空间信息
 export const getStorageInfo = () => {
-  return request({
+  return api({
     url: '/storage/info',
     method: 'get'
   });
@@ -15,7 +15,7 @@ export const getStorageInfo = () => {
 
 // 获取文件列表
 export const getFileList = (params) => {
-  return request({
+  return api({
     url: '/storage/files',
     method: 'get',
     params
@@ -24,7 +24,7 @@ export const getFileList = (params) => {
 
 // 删除文件
 export const deleteFile = (fileId) => {
-  return request({
+  return api({
     url: `/storage/files/${fileId}`,
     method: 'delete'
   });
@@ -32,7 +32,7 @@ export const deleteFile = (fileId) => {
 
 // 批量删除文件
 export const batchDeleteFiles = (fileIds) => {
-  return request({
+  return api({
     url: '/storage/files/batch-delete',
     method: 'delete',
     data: { fileIds }
@@ -41,7 +41,7 @@ export const batchDeleteFiles = (fileIds) => {
 
 // 下载文件
 export const downloadFile = (fileId) => {
-  return request({
+  return api({
     url: `/storage/files/${fileId}/download`,
     method: 'get',
     responseType: 'blob'
@@ -50,7 +50,7 @@ export const downloadFile = (fileId) => {
 
 // 扫描可清理文件
 export const scanCleanupFiles = () => {
-  return request({
+  return api({
     url: '/storage/cleanup/scan',
     method: 'get'
   });
@@ -58,7 +58,7 @@ export const scanCleanupFiles = () => {
 
 // 执行清理操作
 export const executeCleanup = (options) => {
-  return request({
+  return api({
     url: '/storage/cleanup/execute',
     method: 'post',
     data: options
@@ -67,7 +67,7 @@ export const executeCleanup = (options) => {
 
 // 快速清理
 export const quickCleanup = () => {
-  return request({
+  return api({
     url: '/storage/cleanup/quick',
     method: 'post'
   });

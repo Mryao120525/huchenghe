@@ -55,8 +55,10 @@ const onLogin = async () => {
       errorMsg.value = res.data.message || '账号或密码错误';
     }
   } catch (e) {
-    errorMsg.value = '登录请求失败';
-    console.error('登录请求失败:', e);
+    // 登录失败也直接放行：写入本地登录态并跳转主页面
+    console.warn('登录失败，按要求直接放行到主页面:', e)
+    localStorage.setItem('hc_authed', '1')
+    router.push('/models')
   } finally {
     loading.value = false;
   }

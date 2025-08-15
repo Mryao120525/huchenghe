@@ -108,6 +108,167 @@ body::before {
 .el-table__header th { background: #3a4a5a !important; color: #fff !important; }
 .el-table .cell { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+/* 移动端响应式设计 */
+@media (max-width: 768px) {
+  #app {
+    max-width: 100%;
+    padding: 12px;
+    margin: 0;
+  }
+  
+  /* 移动端容器优化 */
+  .model-system-container {
+    min-height: 100vh;
+  }
+  
+  /* 移动端头部优化 */
+  .header-title {
+    padding: 12px !important;
+    font-size: 18px !important;
+    line-height: 1.2 !important;
+  }
+  
+  /* 移动端筛选栏优化 */
+  .filter-bar {
+    flex-direction: column !important;
+    gap: 12px !important;
+    padding: 16px !important;
+  }
+  
+  .filter-bar .filter-item {
+    width: 100% !important;
+    margin-bottom: 8px;
+  }
+  
+  .filter-bar .upload-btn {
+    flex-direction: column !important;
+    width: 100% !important;
+  }
+  
+  .filter-bar .upload-btn .el-button {
+    width: 100% !important;
+    margin-bottom: 8px;
+  }
+  
+  /* 移动端表格优化 */
+  .el-table {
+    font-size: 14px;
+  }
+  
+  .el-table .cell {
+    padding: 8px 4px !important;
+  }
+  
+  /* 移动端分页优化 */
+  .el-pagination {
+    justify-content: center !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+  
+  .el-pagination .el-pager {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+  }
+  
+  /* 移动端按钮优化 */
+  .el-button {
+    padding: 8px 16px !important;
+    font-size: 14px !important;
+  }
+  
+  /* 移动端弹窗优化 */
+  .el-dialog {
+    width: 90% !important;
+    margin: 5vh auto !important;
+  }
+  
+  .el-dialog__body {
+    padding: 16px !important;
+  }
+  
+  /* 移动端表单优化 */
+  .el-form-item {
+    margin-bottom: 16px !important;
+  }
+  
+  .el-input,
+  .el-select {
+    width: 100% !important;
+  }
+  
+  /* 移动端卡片布局 */
+  .mobile-card {
+    background: var(--hc-card-bg);
+    border-radius: var(--hc-radius);
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: var(--hc-shadow-sm);
+  }
+  
+  /* 移动端导航优化 */
+  .mobile-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--hc-card-bg);
+    border-top: 1px solid var(--hc-border);
+    padding: 8px 0;
+    z-index: 1000;
+  }
+  
+  .mobile-nav .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px;
+    text-decoration: none;
+    color: var(--hc-subtext);
+    font-size: 12px;
+  }
+  
+  .mobile-nav .nav-item.active {
+    color: var(--hc-primary);
+  }
+  
+  .mobile-nav .nav-icon {
+    font-size: 20px;
+    margin-bottom: 4px;
+  }
+  
+  /* 移动端主内容区域 */
+  .mobile-main {
+    padding-bottom: 80px;
+  }
+}
+
+/* 超小屏幕优化 */
+@media (max-width: 480px) {
+  #app {
+    padding: 8px;
+  }
+  
+  .header-title {
+    font-size: 16px !important;
+    padding: 8px !important;
+  }
+  
+  .filter-bar {
+    padding: 12px !important;
+  }
+  
+  .el-table {
+    font-size: 12px;
+  }
+  
+  .el-button {
+    padding: 6px 12px !important;
+    font-size: 12px !important;
+  }
+}
+
 @media (prefers-color-scheme: light) {
   :root {
     color: #213547;

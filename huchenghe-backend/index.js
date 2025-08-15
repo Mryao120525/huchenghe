@@ -116,7 +116,7 @@ app.use((req, res, next) => {
 
 // 注册路由
 app.use('/api/models', modelRoutes); // 挂载模型相关API路由到/api/models路径下
-app.use('/api/auth', loginRoutes); // 挂载登录相关API路由到/api/auth路径下
+app.use('/api', loginRoutes); // 挂载登录相关API路由到/api路径下
 app.use('/api/users', userRoutes); // 挂载用户管理API路由到/api/users路径下
 app.use('/api/storage', storageRoutes); // 挂载存储空间管理API路由到/api/storage路径下
 
@@ -167,8 +167,11 @@ app.use((req, res) => {
 });
 
 // 启动服务器并监听指定端口
-const server = app.listen(PORT, () => {
-  console.log(`Server is running at http://localhost:${PORT}`);
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server is running at http://0.0.0.0:${PORT}`);
+  console.log(`Local access: http://localhost:${PORT}`);
+  console.log(`Network access: http://192.168.0.54:${PORT}`);
+  console.log(`Public access: http://157.10.251.87:${PORT}`);
 }).on('error', (err) => {
   console.error('Failed to start server:', err);
 });
