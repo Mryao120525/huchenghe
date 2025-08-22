@@ -77,18 +77,7 @@ const routes = [
     component: Admin,
     meta: { requiresAuth: true }
   },
-  // 测试连接页面
-  {
-    path: '/test-connection',
-    name: 'TestConnection',
-    component: () => import('../views/TestConnection.vue')
-  },
-  // 移动端测试页面
-  {
-    path: '/mobile-test',
-    name: 'MobileTest',
-    component: () => import('../views/MobileTest.vue')
-  },
+
   // 存储空间管理页面
   {
     path: '/storage-management',

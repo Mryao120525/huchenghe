@@ -1,26 +1,27 @@
 {
   "name": "huchenghe-frontend",
-  "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "护橙河三维模型管理系统前端",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --force",
+    "dev:clean": "vite --force --clearScreen",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "clean": "rimraf dist node_modules/.vite",
+    "start": "vite --host --port 5173"
   },
   "dependencies": {
-    "@element-plus/icons-vue": "^2.3.2",
-    "axios": "^1.11.0",
-    "build": "^0.1.4",
-    "element-plus": "^2.10.6",
+    "@element-plus/icons-vue": "^2.1.0",
+    "element-plus": "^2.3.8",
     "jszip": "^3.10.1",
-    "three": "^0.179.1",
-    "vue": "^3.5.18",
-    "vue-router": "^4.5.1",
+    "three": "^0.155.0",
+    "vue": "^3.3.4",
+    "vue-router": "^4.2.4",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^6.0.1",
-    "vite": "^7.1.0"
+    "@vitejs/plugin-vue": "^4.2.3",
+    "vite": "^4.4.5"
   }
 }

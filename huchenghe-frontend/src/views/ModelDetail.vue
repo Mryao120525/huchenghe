@@ -4,236 +4,292 @@ ModelDetail.vue
 -->
 
 <template>
-  
   <el-container class="main-container">
+    <!-- 页面头部 -->
     <el-header class="detail-header">
-      <div style="width: 100%; display: flex; align-items: center; justify-content: space-between; height: 100%;">
-        <el-button type="info" @click="goBack">返回模型列表</el-button>
-        <span class="detail-title-text">
+      <div class="header-content">
+        <el-button type="info" @click="goBack" class="back-btn">
+          <el-icon><ArrowLeft /></el-icon>
+          返回模型列表
+        </el-button>
+        <h1 class="detail-title-text">
           模型详情 - {{ modelDetail ? modelDetail.name : '' }}
-        </span>
-        <el-button type="primary" @click="downloadModel" :disabled="!modelDetail || !modelDetail.model_path">下载模型</el-button>
+        </h1>
+        <el-button type="primary" @click="downloadModel" :disabled="!modelDetail || !modelDetail.model_path" class="download-btn">
+          <el-icon><Download /></el-icon>
+          下载模型
+        </el-button>
       </div>
     </el-header>
-    <el-main style="display: flex; gap: 20px; position: relative; padding-top: 8px;">
-      <!-- 3D模型显示区域 - 居中显示 -->
-      <div class="model-viewer-container">
-        <div id="three-container" class="three-container">
-          <div class="threejs-controls-container">
-          <!-- 场景控制 -->
-          <div class="control-group scene-controls">
-            <el-button-group>
-              <el-button 
-                type="primary" 
-                size="small" 
-                @click="resetScene"
-                :icon="Refresh"
-                title="重置场景"
-              />
-              <el-button 
-                :type="showGrid ? 'success' : 'default'" 
-                size="small" 
-                @click="() => { showGrid = !showGrid; toggleGrid(showGrid); }"
-                :icon="Grid"
-                :title="showGrid ? '隐藏网格' : '显示网格'"
-              />
-              <el-button 
-                :type="showAxes ? 'warning' : 'default'" 
-                size="small" 
-                @click="() => { showAxes = !showAxes; toggleAxes(showAxes); }"
-                :icon="Position"
-                :title="showAxes ? '隐藏坐标轴' : '显示坐标轴'"
-              />
-              <el-button 
-                :type="showMaterial ? 'info' : 'default'" 
-                size="small" 
-                @click="() => { showMaterial = !showMaterial; toggleMaterial(showMaterial); }"
-                :icon="Picture"
-                :title="showMaterial ? '隐藏材质' : '显示材质'"
-              />
-            </el-button-group>
+
+    <el-main class="detail-main">
+      <!-- 主要内容区域 -->
+      <div class="content-wrapper">
+                <!-- 左侧版本历史面板 -->
+        <div class="version-panel">
+          <!-- 版本历史 -->
+          <div class="info-section">
+            <div class="section-header">
+              <h3 class="section-title">版本历史</h3>
+              <el-button type="primary" size="small" @click="showVersionDialog = true">
+                <el-icon><Plus /></el-icon>
+                添加记录
+              </el-button>
+            </div>
+            <div class="version-content" v-if="versionHistory && versionHistory.length > 0">
+              <el-timeline>
+                <el-timeline-item 
+                  v-for="(record, index) in versionHistory" 
+                  :key="index"
+                  :timestamp="formatTimestamp(record.timestamp)" 
+                  placement="top"
+                  :type="getTimelineItemType(record.action)"
+                  size="large"
+                >
+                  <div class="version-record">
+                    <div class="version-header">
+                      <span class="version-number">v{{ record.version }}</span>
+                      <el-tag :type="getTagType(record.action)" size="small">
+                        {{ getActionText(record.action) }}
+                      </el-tag>
+                    </div>
+                    <div class="version-details">
+                      <p class="operator">
+                        <el-icon><User /></el-icon>
+                        操作人: {{ record.operator }}
+                      </p>
+                      <p class="description">{{ record.description }}</p>
+                      <div v-if="record.changes && record.changes.length > 0" class="changes-list">
+                        <p class="changes-title">修改内容:</p>
+                        <ul>
+                          <li v-for="(change, changeIndex) in record.changes" :key="changeIndex">
+                            <span class="change-field">{{ change.field }}:</span>
+                            <span class="change-old">{{ change.oldValue }}</span>
+                            <span class="change-arrow">→</span>
+                            <span class="change-new">{{ change.newValue }}</span>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </el-timeline-item>
+              </el-timeline>
+            </div>
+            <div v-else class="no-data">
+              <el-empty description="暂无版本记录" />
+            </div>
           </div>
-            <!-- 模型操作 -->
+        </div>
+
+        <!-- 中间3D模型显示区域 -->
+        <div class="model-viewer-section">
+          <div class="viewer-header">
+            <h3 class="section-title">3D模型预览</h3>
+            <div class="viewer-actions">
+              <el-button size="small" @click="resetScene" type="info">
+                <el-icon><Refresh /></el-icon>
+                重置场景
+              </el-button>
+              <el-button size="small" @click="fitModel" type="success">
+                <el-icon><FullScreen /></el-icon>
+                适应模型
+              </el-button>
+            </div>
+          </div>
+          
+          <div class="model-viewer-container">
+            <div id="three-container" class="three-container"></div>
+          </div>
+          
+          <!-- 3D控制工具栏 -->
+          <div class="threejs-controls-container">
+            <!-- 场景控制 -->
+            <div class="control-group scene-controls">
+              <h4 class="control-title">场景控制</h4>
+              <div class="control-buttons">
+                <el-button
+                  :type="showGrid ? 'success' : 'default'"
+                  size="small"
+                  @click="() => { showGrid = !showGrid; toggleGrid(showGrid); }"
+                  :icon="Grid"
+                  :title="showGrid ? '隐藏网格' : '显示网格'"
+                >
+                  {{ showGrid ? '隐藏网格' : '显示网格' }}
+                </el-button>
+                <el-button
+                  :type="showAxes ? 'warning' : 'default'"
+                  size="small"
+                  @click="() => { showAxes = !showAxes; toggleAxes(showAxes); }"
+                  :icon="Position"
+                  :title="showAxes ? '隐藏坐标轴' : '显示坐标轴'"
+                >
+                  {{ showAxes ? '隐藏坐标轴' : '显示坐标轴' }}
+                </el-button>
+                <el-button
+                  :type="showMaterial ? 'info' : 'default'"
+                  size="small"
+                  @click="() => { showMaterial = !showMaterial; toggleMaterial(showMaterial); }"
+                  :icon="Picture"
+                  :title="showMaterial ? '隐藏材质' : '显示材质'"
+                >
+                  {{ showMaterial ? '隐藏材质' : '显示材质' }}
+                </el-button>
+              </div>
+            </div>
+            
             <div class="control-group model-controls">
-              <el-button-group>
-                <el-button 
-                  type="primary" 
-                  size="small" 
+              <h4 class="control-title">模型操作</h4>
+              <div class="control-buttons">
+                <el-button
+                  type="primary"
+                  size="small"
                   @click="resetCamera"
                   :icon="Refresh"
                   title="重置视角"
-                />
-                <el-button 
-                  type="success" 
-                  size="small" 
-                  @click="fitModel"
-                  :icon="FullScreen"
-                  title="适应模型"
-                />
-                <el-button 
-                  type="warning" 
-                  size="small" 
+                >
+                  重置视角
+                </el-button>
+                <el-button
+                  type="warning"
+                  size="small"
                   @click="toggleWireframeMode"
                   :icon="Grid"
                   :title="showWireframe ? '切换至实体模式' : '切换至线框模式'"
-                />
-              </el-button-group>
+                >
+                  {{ showWireframe ? '实体模式' : '线框模式' }}
+                </el-button>
+              </div>
             </div>
             
-            <!-- 贴图控制 -->
             <div class="control-group texture-controls">
-              <el-button-group>
-                <el-button 
-                  type="info" 
-                  size="small" 
+              <h4 class="control-title">贴图控制</h4>
+              <div class="control-buttons">
+                <el-button
+                  type="info"
+                  size="small"
                   @click="increaseTexture"
                   :icon="Plus"
                   title="增强贴图"
-                />
-                <el-button 
-                  type="info" 
-                  size="small" 
+                >
+                  增强贴图
+                </el-button>
+                <el-button
+                  type="info"
+                  size="small"
                   @click="decreaseTexture"
                   :icon="Minus"
                   title="减弱贴图"
-                />
-                <el-button 
-                  :type="showTexture ? 'danger' : 'default'" 
-                  size="small" 
+                >
+                  减弱贴图
+                </el-button>
+                <el-button
+                  :type="showTexture ? 'danger' : 'default'"
+                  size="small"
                   @click="() => { showTexture = !showTexture; toggleTexture(showTexture); }"
                   :icon="Picture"
                   :title="showTexture ? '隐藏贴图' : '显示贴图'"
-                />
-              </el-button-group>
-            </div>
-            
-            <!-- 灯光控制 -->
-            <div class="control-group light-controls">
-              <div class="light-toggle">
-                <el-tooltip :content="showAmbientLight ? '关闭环境光' : '开启环境光'" placement="top">
-                  <el-switch v-model="showAmbientLight" @change="toggleAmbientLight" />
-                </el-tooltip>
+                >
+                  {{ showTexture ? '隐藏贴图' : '显示贴图' }}
+                </el-button>
               </div>
-              <div class="light-control-item">
-                <el-tooltip content="主光源强度" placement="top">
-                  <el-slider 
-                    v-model="mainLightIntensity" 
-                    :min="0" 
-                    :max="10" 
+            </div>
+
+            <div class="control-group light-controls">
+              <h4 class="control-title">灯光控制</h4>
+              <div class="light-control-content">
+                <el-button
+                  :type="showAmbientLight ? 'primary' : 'default'"
+                  size="small"
+                  @click="toggleAmbientLight(!showAmbientLight)"
+                  :icon="Picture"
+                  :title="showAmbientLight ? '关闭环境光' : '开启环境光'"
+                >
+                  环境光
+                </el-button>
+                <div class="light-slider-wrapper">
+                  <span class="light-label">主光源</span>
+                  <el-slider
+                    v-model="mainLightIntensity"
+                    :min="0"
+                    :max="10"
                     :step="0.1"
                     @change="updateMainLight"
                     :show-tooltip="false"
-                    height="80px"
-                    vertical
+                    class="light-slider"
                   />
-                </el-tooltip>
-              </div>
-              <div class="light-control-item">
-                <el-tooltip content="环境光强度" placement="top">
-                  <el-slider 
-                    v-model="ambientLightIntensity" 
-                    :min="0" 
-                    :max="10" 
+                </div>
+                <div class="light-slider-wrapper">
+                  <span class="light-label">环境光</span>
+                  <el-slider
+                    v-model="ambientLightIntensity"
+                    :min="0"
+                    :max="10"
                     :step="0.1"
                     @change="updateAmbientLight"
                     :show-tooltip="false"
-                    height="80px"
-                    vertical
+                    class="light-slider"
                   />
-                </el-tooltip>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-      
-      <!-- 右侧信息面板 -->
-      <div class="info-panel">
-        <!-- 模型属性 -->
-        <div class="info-section">
-          <h3 class="section-title">模型属性</h3>
-          <div class="model-info" v-if="modelDetail">
-            <div class="info-item">
-              <span class="info-label">ID:</span>
-              <span class="info-value">{{ modelDetail.id }}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">模型名称:</span>
-              <span class="info-value">{{ modelDetail.name }}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">类别:</span>
-              <span class="info-value">{{ modelDetail.category }}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">区域:</span>
-              <span class="info-value">{{ modelDetail.area }}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">主址:</span>
-              <span class="info-value">{{ modelDetail.address }}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">数量:</span>
-              <span class="info-value">{{ modelDetail.quantity }}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">创建时间:</span>
-              <span class="info-value">{{ modelDetail.create_time }}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">更新时间:</span>
-              <span class="info-value">{{ modelDetail.update_time }}</span>
-            </div>
-          </div>
-          <div v-else class="no-data">
-            <p>未找到该模型信息</p>
-          </div>
-        </div>
         
-        <!-- 版本历史 -->
-        <div class="info-section">
-          <div class="section-header">
-            <h3 class="section-title">版本历史</h3>
-            <el-button type="primary" size="small" @click="showVersionDialog = true">添加记录</el-button>
-          </div>
-          <div class="version-content" v-if="versionHistory && versionHistory.length > 0">
-            <el-timeline>
-              <el-timeline-item 
-                v-for="(record, index) in versionHistory" 
-                :key="index"
-                :timestamp="formatTimestamp(record.timestamp)" 
-                placement="top"
-                :type="getTimelineItemType(record.action)"
-              >
-                <div class="version-record">
-                  <div class="version-header">
-                    <span class="version-number">v{{ record.version }}</span>
-                    <span class="action-type" :class="getActionClass(record.action)">
-                      {{ getActionText(record.action) }}
-                    </span>
-                  </div>
-                  <div class="version-details">
-                    <p class="operator">操作人: {{ record.operator }}</p>
-                    <p class="description">{{ record.description }}</p>
-                    <div v-if="record.changes && record.changes.length > 0" class="changes-list">
-                      <p class="changes-title">修改内容:</p>
-                      <ul>
-                        <li v-for="(change, changeIndex) in record.changes" :key="changeIndex">
-                          <span class="change-field">{{ change.field }}:</span>
-                          <span class="change-old">{{ change.oldValue }}</span>
-                          <span class="change-arrow">→</span>
-                          <span class="change-new">{{ change.newValue }}</span>
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
+        <!-- 右侧信息面板 -->
+        <div class="info-panel">
+          <!-- 模型属性 -->
+          <div class="info-section">
+            <div class="section-header">
+              <h3 class="section-title">模型属性</h3>
+              <el-tag type="primary" size="small">{{ modelDetail ? modelDetail.category : '' }}</el-tag>
+            </div>
+            <div class="model-info" v-if="modelDetail">
+              <div class="info-item">
+                <div class="info-content">
+                  <span class="info-label">模型名称</span>
+                  <span class="info-value">{{ modelDetail.name }}</span>
                 </div>
-              </el-timeline-item>
-            </el-timeline>
-          </div>
-          <div v-else class="no-data">
-            <p>暂无版本记录</p>
+              </div>
+              <div class="info-item">
+                <div class="info-content">
+                  <span class="info-label">模型ID</span>
+                  <span class="info-value">{{ modelDetail.id }}</span>
+                </div>
+              </div>
+              <div class="info-item">
+                <div class="info-content">
+                  <span class="info-label">所属区域</span>
+                  <span class="info-value">{{ modelDetail.area }}</span>
+                </div>
+              </div>
+              <div class="info-item">
+                <div class="info-content">
+                  <span class="info-label">主址位置</span>
+                  <span class="info-value">{{ modelDetail.address }}</span>
+                </div>
+              </div>
+              <div class="info-item">
+                <div class="info-content">
+                  <span class="info-label">数量</span>
+                  <span class="info-value">{{ modelDetail.quantity }}</span>
+                </div>
+              </div>
+              <div class="info-item">
+                <div class="info-content">
+                  <span class="info-label">创建时间</span>
+                  <span class="info-value">{{ formatDate(modelDetail.create_time) }}</span>
+                </div>
+              </div>
+              <div class="info-item">
+                <div class="info-content">
+                  <span class="info-label">更新时间</span>
+                  <span class="info-value">{{ formatDate(modelDetail.update_time) }}</span>
+                </div>
+              </div>
+            </div>
+            <div v-else class="no-data">
+              <el-empty description="未找到该模型信息" />
+            </div>
           </div>
         </div>
       </div>
@@ -243,22 +299,29 @@ ModelDetail.vue
     <el-dialog 
       v-model="showVersionDialog" 
       title="添加版本记录" 
-      width="500px"
+      width="600px"
       :before-close="handleVersionDialogClose"
+      class="version-dialog"
     >
       <el-form :model="newVersionForm" :rules="versionFormRules" ref="versionFormRef" label-width="100px">
-        <el-form-item label="版本号" prop="version">
-          <el-input v-model="newVersionForm.version" placeholder="请输入版本号，如：1.2.3" />
-        </el-form-item>
-        <el-form-item label="操作类型" prop="action">
-          <el-select v-model="newVersionForm.action" placeholder="请选择操作类型" style="width: 100%;">
-            <el-option label="创建" value="create" />
-            <el-option label="更新" value="update" />
-            <el-option label="修改" value="modify" />
-            <el-option label="上传" value="upload" />
-            <el-option label="删除" value="delete" />
-          </el-select>
-        </el-form-item>
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="版本号" prop="version">
+              <el-input v-model="newVersionForm.version" placeholder="请输入版本号，如：1.2.3" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="操作类型" prop="action">
+              <el-select v-model="newVersionForm.action" placeholder="请选择操作类型" style="width: 100%;">
+                <el-option label="创建" value="create" />
+                <el-option label="更新" value="update" />
+                <el-option label="修改" value="modify" />
+                <el-option label="上传" value="upload" />
+                <el-option label="删除" value="delete" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
         <el-form-item label="操作人" prop="operator">
           <el-input v-model="newVersionForm.operator" placeholder="请输入操作人姓名" />
         </el-form-item>
@@ -312,7 +375,10 @@ import {
   Minus, 
   Picture, 
   Delete, 
-  Position 
+  Position,
+  ArrowLeft,
+  Download,
+  User
 } from '@element-plus/icons-vue';
 import { modelAPI } from '../api/index.js';
 import api from '../api/index.js';
@@ -377,10 +443,10 @@ const versionFormRules = {
   ]
 };
 
-let renderer, scene, camera, animationId, controls;
+let renderer, scene, camera, animationId, controls, transformControls;
 let loadedModel = ref(null);
-let transformControls = null;
 let handleResize;
+let resizeObserver = null; // 用于监听容器大小变化的 ResizeObserver
 
 // 场景对象引用
 let axesHelper = null;
@@ -391,9 +457,23 @@ let ambientLight = null;
 // 贴图强度控制
 let textureIntensity = ref(1.0);
 
+// 事件监听器引用，用于管理事件监听器
+let modelHoverListener = null;
+let modelClickListener = null;
+
+// 节流变量，用于优化性能
+let hoverThrottleTimer = null;
+let lastHoverTime = 0;
+
 const getApiOrigin = () => {
   const base = api.defaults.baseURL || '';
-  return base.replace(/\/?api\/?$/, '');
+  console.log('API baseURL:', base);
+  
+  // 移除 /api 后缀，获取基础域名
+  const origin = base.replace(/\/?api\/?$/, '');
+  console.log('API origin:', origin);
+  
+  return origin;
 };
 
 // 控制面板折叠/展开
@@ -647,16 +727,37 @@ const submitVersionRecord = async () => {
 };
 
 const loadThreeModel = (path) => {
-  if (!path) return;
+  if (!path) {
+    console.warn('模型路径为空，无法加载模型');
+    ElMessage.warning('模型路径为空，无法加载模型');
+    return;
+  }
+  
   const origin = getApiOrigin();
   const fullUrl = path.startsWith('http') ? path : `${origin}${path}`;
+  console.log('尝试加载模型:', fullUrl);
+  
   const ext = (fullUrl.split('.').pop() || '').toLowerCase();
+  
+  // 检查Three.js场景是否已初始化
+  if (!scene || !renderer || !camera) {
+    console.error('Three.js场景未初始化，无法加载模型');
+    ElMessage.error('3D场景未初始化，请刷新页面重试');
+    return;
+  }
+  
   // 仅示例支持 FBX
   if (ext === 'fbx') {
     const loader = new FBXLoader();
+    
+    // 显示加载状态
+    ElMessage.info('正在加载3D模型...');
+    
     loader.load(
       fullUrl,
       (object) => {
+        console.log('模型加载成功:', object);
+        
         // 保存原始贴图信息
         object.traverse(child => {
           if (child.isMesh && child.material) {
@@ -674,150 +775,203 @@ const loadThreeModel = (path) => {
           }
         });
         
+        // 清除之前的模型和TransformControls
+        if (loadedModel.value) {
+          scene.remove(loadedModel.value);
+        }
+        // 清除之前的模型
+        if (loadedModel.value) {
+          scene.remove(loadedModel.value);
+        }
+        
         scene.add(object);
         loadedModel.value = object;
         
         // 自动缩放和居中
         fitCameraToObject(object, 1.5, controls);
         
-        renderer.domElement.addEventListener('pointermove', onModelHover);
-        renderer.domElement.addEventListener('pointerdown', onModelClick);
+        // 验证场景状态
+        console.log('模型加载完成，场景状态验证:');
+        console.log('- 场景对象数量:', scene.children.length);
+        console.log('- 模型已添加到场景:', scene.children.includes(object));
+        console.log('- 相机位置:', camera.position);
+        console.log('- 控制器目标:', controls.target);
+        
+        ElMessage.success('3D模型加载成功');
       },
-      undefined,
+      (progress) => {
+        // 加载进度
+        const percent = Math.round((progress.loaded / progress.total) * 100);
+        console.log(`模型加载进度: ${percent}%`);
+      },
       (error) => {
-        console.error('FBX 加载失败', error);
-        ElMessage.error('模型加载失败');
+        console.error('FBX 加载失败:', error);
+        console.error('请求的URL:', fullUrl);
+        console.error('错误详情:', error.message || error);
+        ElMessage.error(`模型加载失败: ${error.message || '未知错误'}`);
       }
     );
   } else {
     console.warn('暂未支持的模型格式:', ext, fullUrl);
-    ElMessage.warning('暂不支持该模型格式');
+    ElMessage.warning(`暂不支持该模型格式: ${ext}`);
   }
 };
 
 onMounted(async () => {
-  const container = document.getElementById('three-container');
-  if (!container) return;
-  // 场景
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xf5f5f5);
-  // 相机
-  camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
-  camera.position.set(3, 3, 6);
-  camera.lookAt(0, 0, 0);
-  // 渲染器
-  renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setSize(container.clientWidth, container.clientHeight);
-  renderer.setPixelRatio(window.devicePixelRatio);
-  container.appendChild(renderer.domElement);
-
-  // 监听窗口缩放，动态调整threejs画布和相机
-  handleResize = function () {
-    const width = container.clientWidth;
-    const height = container.clientHeight;
-    camera.aspect = width / height;
-    camera.updateProjectionMatrix();
-    renderer.setSize(width, height);
-  };
-  window.addEventListener('resize', handleResize);
-  // 轨道控制
-  controls = new OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
-  // 坐标轴辅助
-  axesHelper = new THREE.AxesHelper(3);
-  scene.add(axesHelper);
-  // 网格地面
-  gridHelper = new THREE.GridHelper(10, 20);
-  scene.add(gridHelper);
-  // 方向光
-  directionalLight = new THREE.DirectionalLight(0xffffff, mainLightIntensity.value);
-  directionalLight.position.set(5, 5, 5);
-  scene.add(directionalLight);
-  // 环境光
-  ambientLight = new THREE.AmbientLight(0x404040, ambientLightIntensity.value);
-  scene.add(ambientLight);
-
-  // 拉取后端模型详情，并按 model_path 加载三维模型
   try {
-    loading.value = true;
-    const id = route.params.id;
-    const resp = await modelAPI.getModelById(id);
-    modelDetail.value = resp.data;
-    loadThreeModel(modelDetail.value?.model_path);
+    console.log('开始初始化3D场景...');
     
-    // 初始化版本历史
-    initVersionHistory();
-  } catch (e) {
-    console.error('获取模型详情失败:', e);
-    errorMsg.value = '获取模型详情失败';
-    ElMessage.error('获取模型详情失败');
-  } finally {
-    loading.value = false;
-  }
-
-  // 高亮相关变量
-  let lastOutline = null;
-  // 鼠标悬停高亮并显示坐标轴
-  function onModelHover(event) {
-    if (!loadedModel.value) return;
-    const rect = renderer.domElement.getBoundingClientRect();
-    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-    const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-    const mouse = new THREE.Vector2(x, y);
-    const raycaster = new THREE.Raycaster();
-    raycaster.setFromCamera(mouse, camera);
-    const intersects = raycaster.intersectObject(loadedModel.value, true);
-    if (intersects.length > 0) {
-      // 高亮边缘
-      highlightModel(loadedModel.value);
-      // 显示坐标轴
-      if (!transformControls) {
-        transformControls = new TransformControls(camera, renderer.domElement);
-        transformControls.attach(loadedModel.value);
-        scene.add(transformControls);
-        transformControls.addEventListener('mouseDown', function () {
-          controls.enabled = false;
-        });
-        transformControls.addEventListener('mouseUp', function () {
-          controls.enabled = true;
-        });
-      }
-    } else {
-      removeHighlight(loadedModel.value);
-      if (transformControls) {
-        scene.remove(transformControls);
-        transformControls.dispose && transformControls.dispose();
-        transformControls = null;
-      }
+    const container = document.getElementById('three-container');
+    if (!container) {
+      console.error('找不到three-container元素');
+      ElMessage.error('3D容器初始化失败');
+      return;
     }
-  }
+    
+    console.log('容器尺寸:', container.clientWidth, 'x', container.clientHeight);
+    
+    // 初始化Three.js场景
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf5f5f5);
+    
+    // 初始化相机
+    camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+    camera.position.set(3, 3, 6);
+    camera.lookAt(0, 0, 0);
+    
+    // 初始化渲染器
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    container.appendChild(renderer.domElement);
+    
+    console.log('Three.js场景初始化完成');
 
-  // 高亮模型边缘
-  function highlightModel(model) {
-    model.traverse(child => {
-      if (child.isMesh) {
-        if (!child.userData._origMaterial) {
-          child.userData._origMaterial = child.material;
+    // 定义 handleResize 函数
+    handleResize = function () {
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      if (width === 0 || height === 0) {
+        console.warn('容器尺寸为0，跳过渲染器和相机更新');
+        return;
+      }
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(width, height);
+      console.log('Three.js 渲染器和相机尺寸已更新:', width, 'x', height);
+    };
+
+    // 使用 ResizeObserver 监听 three-container 元素的大小变化
+    resizeObserver = new ResizeObserver(entries => {
+      for (let entry of entries) {
+        if (entry.target === container) {
+          console.log('ResizeObserver 触发，容器大小变化');
+          handleResize();
         }
-        // 创建高亮材质
-        child.material = child.material.clone();
-        child.material.emissive = new THREE.Color(0x4f8cff);
-        child.material.emissiveIntensity = 0.6;
-        child.material.needsUpdate = true;
       }
     });
-  }
-  function removeHighlight(model) {
-    model.traverse(child => {
-      if (child.isMesh && child.userData._origMaterial) {
-        child.material = child.userData._origMaterial;
-        child.material.needsUpdate = true;
+    resizeObserver.observe(container);
+
+    // 移除 window.addEventListener('resize', handleResize); 因为 ResizeObserver 更精确
+    // window.addEventListener('resize', handleResize);
+    
+    // 初始化轨道控制
+    controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.screenSpacePanning = false;
+    controls.minDistance = 0.1;
+    controls.maxDistance = 1000;
+    controls.maxPolarAngle = Math.PI;
+    
+    // 确保OrbitControls不会与TransformControls冲突
+    controls.enableKeys = false; // 禁用键盘控制，避免与TransformControls冲突
+    
+    // 添加坐标轴辅助
+    axesHelper = new THREE.AxesHelper(3);
+    scene.add(axesHelper);
+    
+    // 添加网格地面
+    gridHelper = new THREE.GridHelper(10, 20);
+    scene.add(gridHelper);
+    
+    // 添加方向光
+    directionalLight = new THREE.DirectionalLight(0xffffff, mainLightIntensity.value);
+    directionalLight.position.set(5, 5, 5);
+    scene.add(directionalLight);
+    
+    // 添加环境光
+    ambientLight = new THREE.AmbientLight(0x404040, ambientLightIntensity.value);
+    scene.add(ambientLight);
+    
+    console.log('场景元素添加完成');
+
+    // 拉取后端模型详情，并按 model_path 加载三维模型
+    try {
+      loading.value = true;
+      const id = route.params.id;
+      console.log('获取模型ID:', id);
+      
+      const resp = await modelAPI.getModelById(id);
+      console.log('模型详情响应:', resp);
+      
+      modelDetail.value = resp.data;
+      console.log('模型详情数据:', modelDetail.value);
+      console.log('模型路径:', modelDetail.value?.model_path);
+      
+      // 检查模型路径
+      if (modelDetail.value?.model_path) {
+        loadThreeModel(modelDetail.value.model_path);
+      } else {
+        console.warn('模型路径为空');
+        ElMessage.warning('该模型暂无3D文件，将显示默认场景');
+        
+        // 创建一个简单的立方体作为默认模型
+        const geometry = new THREE.BoxGeometry(2, 2, 2);
+        const material = new THREE.MeshLambertMaterial({ color: 0x4f8cff });
+        const cube = new THREE.Mesh(geometry, material);
+        
+        scene.add(cube);
+        loadedModel.value = cube;
+        
+        // 调整相机位置
+        camera.position.set(5, 5, 5);
+        camera.lookAt(0, 0, 0);
+        controls.target.set(0, 0, 0);
+        controls.update();
+        
+        console.log('默认立方体模型已创建');
       }
-    });
+      
+      // 在模型加载后强制更新一次尺寸，确保初始渲染正确
+      handleResize();
+
+      // 初始化版本历史
+      initVersionHistory();
+    } catch (e) {
+      console.error('获取模型详情失败:', e);
+      errorMsg.value = '获取模型详情失败';
+      ElMessage.error(`获取模型详情失败: ${e.message || '未知错误'}`);
+    } finally {
+      loading.value = false;
+    }
+  } catch (error) {
+    console.error('3D场景初始化失败:', error);
+    ElMessage.error(`3D场景初始化失败: ${error.message || '未知错误'}`);
   }
 
-  // 点击模型时无操作，坐标轴已在悬停时出现
-  function onModelClick(event) {}
+  // 初始化 TransformControls
+  transformControls = new TransformControls(camera, renderer.domElement);
+  scene.add(transformControls);
+  transformControls.visible = false; // 默认隐藏
+
+  // 当使用TransformControls时，禁用OrbitControls
+  transformControls.addEventListener('dragging-changed', function (event) {
+    controls.enabled = !event.value;
+  });
+
+  // 添加键盘控制切换模式
+  document.addEventListener('keydown', onKeyDown);
 
   // 动画循环
   function animate() {
@@ -829,12 +983,31 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
-  if (handleResize) window.removeEventListener('resize', handleResize);
+  // 移除 ResizeObserver
+  if (resizeObserver) {
+    resizeObserver.disconnect();
+    resizeObserver = null;
+  }
+  
+  // 移除键盘事件监听器
+  document.removeEventListener('keydown', onKeyDown);
+  
+  // 清理节流定时器
+  if (hoverThrottleTimer) {
+    clearTimeout(hoverThrottleTimer);
+    hoverThrottleTimer = null;
+  }
+  
   if (renderer && renderer.domElement) {
     renderer.domElement.remove();
   }
   if (animationId) {
     cancelAnimationFrame(animationId);
+  }
+  
+  // 清理TransformControls
+  if (transformControls) {
+    transformControls.dispose && transformControls.dispose();
   }
 });
 
@@ -844,6 +1017,128 @@ const downloadModel = () => {
   const fullUrl = `${origin}${modelDetail.value.model_path}`;
   window.open(fullUrl, '_blank');
 };
+
+// 鼠标悬停高亮并显示坐标轴
+const onModelHover = (event) => {
+  if (!loadedModel.value || !renderer || !camera) return;
+  
+  // 节流处理，限制执行频率
+  const now = Date.now();
+  if (now - lastHoverTime < 50) { // 50ms节流
+    if (hoverThrottleTimer) return;
+    
+    hoverThrottleTimer = setTimeout(() => {
+      hoverThrottleTimer = null;
+      processHover(event);
+    }, 50);
+    return;
+  }
+  
+  lastHoverTime = now;
+  processHover(event);
+};
+
+// 处理悬停逻辑
+const processHover = (event) => {
+  const rect = renderer.domElement.getBoundingClientRect();
+  const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  const mouse = new THREE.Vector2(x, y);
+  const raycaster = new THREE.Raycaster();
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObject(loadedModel.value, true);
+  
+  if (intersects.length > 0) {
+    // 高亮边缘
+    highlightModel(loadedModel.value);
+    
+    // 附加TransformControls并使其可见
+    if (loadedModel.value && transformControls) {
+      transformControls.attach(loadedModel.value);
+      transformControls.setMode('rotate'); // 默认设置为旋转模式
+      transformControls.visible = true;
+    }
+  } else {
+    removeHighlight(loadedModel.value);
+    // 分离TransformControls并使其不可见
+    if (transformControls && transformControls.object) {
+      transformControls.detach();
+      transformControls.visible = false;
+    }
+  }
+};
+
+// 键盘控制TransformControls模式
+const onKeyDown = (event) => {
+  if (!transformControls) return;
+  
+  switch (event.key.toLowerCase()) {
+    case 'w':
+      transformControls.setMode('translate');
+      break;
+    case 'e':
+      transformControls.setMode('rotate');
+      break;
+    case 'r':
+      transformControls.setMode('scale');
+      break;
+  }
+};
+
+// 获取当前操作模式文本
+const getCurrentModeText = () => {
+  if (!transformControls) return '';
+  
+  const mode = transformControls.getMode();
+  const modeMap = {
+    'translate': '移动',
+    'rotate': '旋转',
+    'scale': '缩放'
+  };
+  return modeMap[mode] || mode;
+};
+
+// 获取当前操作模式的CSS类
+const getCurrentModeClass = () => {
+  if (!transformControls) return '';
+  
+  const mode = transformControls.getMode();
+  const classMap = {
+    'translate': 'mode-translate',
+    'rotate': 'mode-rotate',
+    'scale': 'mode-scale'
+  };
+  return classMap[mode] || '';
+};
+
+// 高亮模型边缘
+const highlightModel = (model) => {
+  model.traverse(child => {
+    if (child.isMesh) {
+      if (!child.userData._origMaterial) {
+        child.userData._origMaterial = child.material;
+      }
+      // 创建高亮材质
+      child.material = child.material.clone();
+      child.material.emissive = new THREE.Color(0x4f8cff);
+      child.material.emissiveIntensity = 0.6;
+      child.material.needsUpdate = true;
+    }
+  });
+};
+
+// 移除高亮
+const removeHighlight = (model) => {
+  model.traverse(child => {
+    if (child.isMesh && child.userData._origMaterial) {
+      child.material = child.userData._origMaterial;
+      child.material.needsUpdate = true;
+    }
+  });
+};
+
+// 点击模型时无操作，坐标轴已在悬停时出现
+const onModelClick = (event) => {};
 
 // 场景重置
 const resetScene = () => {
@@ -858,6 +1153,7 @@ const resetScene = () => {
   toggleTexture(true);
   showMaterial.value = true;
   toggleMaterial(true);
+  
   // 灯光
   mainLightIntensity.value = 1.0;
   updateMainLight(1.0);
@@ -865,10 +1161,23 @@ const resetScene = () => {
   updateAmbientLight(0.3);
   if (ambientLight) ambientLight.visible = true;
   showAmbientLight.value = true;
+  
   // 相机
   if (loadedModel.value) {
     fitCameraToObject(loadedModel.value, 1.5, controls);
   }
+  
+  // 清理TransformControls
+  if (transformControls) {
+    transformControls.detach();
+    transformControls.visible = false;
+  }
+  
+  // 确保OrbitControls可用
+  if (controls) {
+    controls.enabled = true;
+  }
+  
   ElMessage.success('场景已重置');
 };
 
@@ -898,6 +1207,17 @@ const formatTimestamp = (timestamp) => {
   }
 };
 
+const formatDate = (timestamp) => {
+  const date = new Date(timestamp);
+  return date.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
 const getActionText = (action) => {
   const actionMap = {
     'create': '创建',
@@ -907,6 +1227,17 @@ const getActionText = (action) => {
     'modify': '修改'
   };
   return actionMap[action] || action;
+};
+
+const getTagType = (action) => {
+  const typeMap = {
+    'create': 'success',
+    'update': 'info',
+    'delete': 'danger',
+    'upload': 'warning',
+    'modify': 'primary'
+  };
+  return typeMap[action] || 'info';
 };
 
 const getActionClass = (action) => {
@@ -1004,341 +1335,439 @@ const initVersionHistory = () => {
 </script>
 
 <style scoped>
-/* 动态背景样式 */
-.animated-background {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: -1;
-  background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
-  overflow: hidden;
-}
-
-.bg-animation {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-}
-
-.bg-circle {
-  position: absolute;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  animation: float 6s ease-in-out infinite;
-}
-
-.bg-circle:nth-child(1) {
-  width: 80px;
-  height: 80px;
-  top: 10%;
-  left: 10%;
-  animation-delay: 0s;
-}
-
-.bg-circle:nth-child(2) {
-  width: 120px;
-  height: 120px;
-  top: 20%;
-  right: 15%;
-  animation-delay: 1s;
-}
-
-.bg-circle:nth-child(3) {
-  width: 60px;
-  height: 60px;
-  top: 60%;
-  left: 20%;
-  animation-delay: 2s;
-}
-
-.bg-circle:nth-child(4) {
-  width: 100px;
-  height: 100px;
-  top: 70%;
-  right: 10%;
-  animation-delay: 3s;
-}
-
-.bg-circle:nth-child(5) {
-  width: 90px;
-  height: 90px;
-  top: 40%;
-  left: 50%;
-  animation-delay: 4s;
-}
-
-.bg-circle:nth-child(6) {
-  width: 70px;
-  height: 70px;
-  top: 80%;
-  left: 70%;
-  animation-delay: 5s;
-}
-
-.bg-circle:nth-child(7) {
-  width: 110px;
-  height: 110px;
-  top: 30%;
-  right: 30%;
-  animation-delay: 6s;
-}
-
-.bg-circle:nth-child(8) {
-  width: 50px;
-  height: 50px;
-  top: 90%;
-  right: 60%;
-  animation-delay: 7s;
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0px) rotate(0deg);
-    opacity: 0.3;
-  }
-  25% {
-    transform: translateY(-20px) rotate(90deg);
-    opacity: 0.6;
-  }
-  50% {
-    transform: translateY(-40px) rotate(180deg);
-    opacity: 0.8;
-  }
-  75% {
-    transform: translateY(-20px) rotate(270deg);
-    opacity: 0.6;
-  }
-}
-
+/* 主容器样式 */
 .main-container {
   position: relative;
   z-index: 1;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   min-height: 100vh;
 }
 
+/* 页面头部样式 */
 .detail-header {
-  background: linear-gradient(270deg, #4f8cff, #6ee7b7, #fbbf24, #f87171, #4f8cff);
-  background-size: 1000% 100%;
-  animation: gradientMove 8s ease-in-out infinite;
-  height: 72px;
-  display: flex;
-  align-items: center;
-}
-.detail-title-text {
-  color: #fff;
-  font-size: 20px;
-  font-weight: bold;
-  display: flex;
-  align-items: center;
-  height: 100%;
-  letter-spacing: 2px;
-  text-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  padding: 0 16px;
-  border-radius: 8px;
-}
-@keyframes gradientMove {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-}
-
-/* 侧边控制面板样式 */
-.side-control-panel {
-  position: absolute;
-  left: 20px;
-  top: 20px;
-  width: 260px;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(15px);
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 20px;
-  z-index: 10;
-  transition: left 0.3s ease-in-out;
-}
-
-.side-control-panel.collapsed {
-  left: -280px; /* 控制面板折叠时的位置 */
-}
-
-.control-toggle {
-  position: absolute;
-  top: 10px;
-  right: -20px; /* 控制面板折叠时的位置 */
-  width: 20px;
-  height: 40px;
-  background-color: #4f8cff;
-  border-radius: 0 10px 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  height: 80px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: -2px 0 8px rgba(0,0,0,0.1);
-  z-index: 11;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
-.control-toggle .el-icon {
-  color: #fff;
-  font-size: 18px;
-  transition: transform 0.3s ease-in-out;
+.header-content {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+  padding: 0 24px;
 }
 
-.control-toggle .is-reverse {
-  transform: rotate(180deg);
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  border-radius: 8px;
+  transition: all 0.3s ease;
 }
 
-.control-content {
-  margin-top: 40px; /* 控制面板折叠时的顶部间距 */
+.back-btn:hover {
+  transform: translateX(-4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.control-section {
-  margin-bottom: 24px;
+.detail-title-text {
+  color: #333;
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: none;
 }
 
-.control-section:last-child {
-  margin-bottom: 0;
+.download-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  border-radius: 8px;
+  transition: all 0.3s ease;
 }
 
-.control-section h4 {
+.download-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* 主要内容区域样式 */
+.detail-main {
+  padding: 24px;
+  background: transparent;
+}
+
+.content-wrapper {
+  display: flex;
+  gap: 24px;
+  max-width: 1700px;
+  margin: 0 auto;
+}
+
+/* 左侧版本历史面板样式 */
+.version-panel {
+  width: 300px;
+  flex-shrink: 0;
+  background: transparent; /* 修改为透明背景 */
+  backdrop-filter: none; /* 移除模糊效果 */
+  border-radius: 16px;
+  box-shadow: none; /* 移除阴影 */
+  border: 1px solid rgba(255, 255, 255, 0.1); /* 调整边框透明度 */
+  overflow: hidden;
+  max-height: 800px;
+  overflow-y: auto;
+}
+
+/* 3D模型显示区域样式 */
+.model-viewer-section {
+  flex: 1;
+  min-width: 0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(15px);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  overflow: hidden;
+}
+
+.viewer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.viewer-header .section-title {
+  margin: 0;
+  color: #333;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.viewer-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.model-viewer-container {
+  position: relative;
+  padding: 24px;
+  border: 2px solid rgba(79, 140, 255, 0.2);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(5px);
+  transition: all 0.3s ease;
+}
+
+.model-viewer-container:hover {
+  border-color: rgba(79, 140, 255, 0.4);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px rgba(79, 140, 255, 0.15);
+}
+
+.three-container {
+  width: 100%;
+  height: 500px;
+  border: 3px solid #4f8cff;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0 20px rgba(79, 140, 255, 0.3), inset 0 0 20px rgba(79, 140, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.three-container:hover {
+  border-color: #337ecc;
+  box-shadow: 0 0 30px rgba(79, 140, 255, 0.5), inset 0 0 30px rgba(79, 140, 255, 0.15);
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* 3D控制工具栏样式 */
+.threejs-controls-container {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr); /* 四列布局 */
+  gap: 16px; /* 控制组之间的距离 */
+  margin-top: 24px;
+  padding: 0 24px; /* 保持与模型容器的左右对齐 */
+}
+
+.control-group {
+  background: transparent; /* 修改为透明背景 */
+  backdrop-filter: none; /* 移除模糊效果 */
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: none; /* 移除阴影 */
+  border: 1px solid rgba(255, 255, 255, 0.1); /* 调整边框透明度 */
+  min-width: 200px;
+}
+
+.control-title {
   margin: 0 0 12px 0;
   color: #333;
   font-size: 14px;
   font-weight: 600;
-  border-bottom: 1px solid #eee;
+  text-align: center;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   padding-bottom: 8px;
 }
 
-.control-item {
+.control-buttons {
+  display: flex;
+  flex-direction: column; /* 垂直排列 */
+  gap: 8px;
+  padding: 0 16px; /* 增加左右内边距 */
+}
+
+.control-buttons .el-button {
+  width: 100%; /* 按钮占据可用宽度 */
+  height: 36px; /* 统一按钮高度 */
+  justify-content: flex-start; /* 按钮文本左对齐 */
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.control-buttons .el-button:hover {
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* 键盘控制提示样式 */
+.keyboard-hints {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.hint-text {
+  margin: 0 0 8px 0;
+  font-size: 12px;
+  color: #666;
+  font-weight: 500;
+}
+
+.hint-items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hint-item {
+  font-size: 11px;
+  color: #999;
+  background: rgba(79, 140, 255, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-align: center;
+  font-family: 'Courier New', monospace;
+}
+
+/* 移除当前模式和键盘控制的样式 */
+.current-mode, .keyboard-hints {
+  display: none;
+}
+
+/* 灯光控制样式 */
+.light-control-content {
+  display: flex;
+  flex-direction: column; /* 垂直排列 */
+  gap: 8px;
+  padding: 0 16px; /* 增加左右内边距 */
+}
+
+.light-control-content .el-button {
+  width: 100%; /* 按钮占据可用宽度 */
+  height: 36px; /* 统一按钮高度 */
+  justify-content: flex-start; /* 按钮文本左对齐 */
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.light-slider-wrapper {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-  padding: 8px 0;
+  gap: 8px;
+  flex-grow: 1;
+  min-width: 150px; /* 确保滑块有足够的空间 */
+  background: rgba(79, 140, 255, 0.1);
+  padding: 4px 8px;
+  border-radius: 8px;
 }
 
-.control-item:last-child {
-  margin-bottom: 0;
-}
-
-.control-item span {
-  font-size: 13px;
+.light-slider-wrapper .light-label {
+  font-size: 12px;
   color: #666;
-  flex: 1;
+  font-weight: 500;
+  flex-shrink: 0;
 }
 
-.control-item .el-switch {
-  margin-left: 12px;
+.light-slider {
+  width: 100%;
+  margin: 0;
 }
 
-.control-item .el-slider {
-  margin-left: 12px;
+/* 右侧信息面板样式 */
+.info-panel {
+  width: 320px;
+  flex: 0 0 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.info-section {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(15px);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  overflow: hidden;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.section-title {
+  margin: 0;
+  color: #333;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.model-info {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.info-item {
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+}
+
+.info-item:hover {
+  background: rgba(255, 255, 255, 0.9);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.info-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+}
+
+.info-label {
+  font-weight: 500;
+  color: #666;
+  font-size: 13px;
+}
+
+.info-value {
+  color: #333;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: right;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 版本历史样式 */
+.version-content {
+  padding: 20px;
+  max-height: 600px;
+  overflow-y: auto;
+}
 
 .version-record {
-  padding: 8px 0;
+  padding: 6px 0;
 }
 
 .version-header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   margin-bottom: 8px;
 }
 
 .version-number {
-  font-weight: bold;
+  font-weight: 700;
   color: #409eff;
   font-size: 14px;
 }
 
-.action-type {
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.action-create {
-  background-color: #e1f3d8;
-  color: #67c23a;
-}
-
-.action-update {
-  background-color: #e1f3d8;
-  color: #67c23a;
-}
-
-.action-delete {
-  background-color: #fef0f0;
-  color: #f56c6c;
-}
-
-.action-upload {
-  background-color: #fdf6ec;
-  color: #e6a23c;
-}
-
-.action-modify {
-  background-color: #f0f9ff;
-  color: #409eff;
-}
-
-.action-default {
-  background-color: #f4f4f5;
-  color: #909399;
-}
-
 .version-details {
-  font-size: 13px;
+  font-size: 12px;
   color: #666;
 }
 
 .operator {
-  margin: 4px 0;
+  margin: 6px 0;
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .description {
-  margin: 4px 0;
+  margin: 6px 0;
   color: #333;
+  line-height: 1.4;
 }
 
 .changes-list {
   margin-top: 8px;
   padding: 8px;
-  background-color: #f8f9fa;
-  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.02);
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .changes-title {
-  font-weight: 500;
-  margin-bottom: 4px;
+  font-weight: 600;
+  margin-bottom: 6px;
   color: #333;
+  font-size: 11px;
 }
 
 .changes-list ul {
   margin: 0;
-  padding-left: 16px;
+  padding-left: 12px;
 }
 
 .changes-list li {
-  margin: 2px 0;
+  margin: 3px 0;
   display: flex;
   align-items: center;
   gap: 4px;
+  font-size: 11px;
 }
 
 .change-field {
@@ -1353,7 +1782,7 @@ const initVersionHistory = () => {
 
 .change-arrow {
   color: #909399;
-  font-size: 12px;
+  font-size: 10px;
 }
 
 .change-new {
@@ -1361,92 +1790,17 @@ const initVersionHistory = () => {
   font-weight: 500;
 }
 
-/* 3D模型显示区域样式 */
-.model-viewer-container {
-  flex-basis: 70%;
-  flex-shrink: 1;
-  flex-grow: 1;
-  min-width: 400px;
-  max-width: 1000px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-}
-
-.three-container {
-  width: 100%;
-  height: 600px;
-  border: 1px solid #ccc;
-  background-color: #f5f5f5;
-  position: relative;
-}
-
-/* 工具栏样式 */
-.model-toolbar {
-  position: absolute;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 90%;
-  max-width: 1200px;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(15px);
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 15px 20px;
-  display: flex;
-  justify-content: space-around;
-  gap: 20px;
-  z-index: 10;
-}
-
-.toolbar-section {
-  flex: 1;
-  min-width: 150px;
-}
-
-.toolbar-section h4 {
-  margin: 0 0 10px 0;
-  color: #333;
-  font-size: 14px;
-  font-weight: 600;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 8px;
-}
-
-.toolbar-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.light-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.light-slider {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.light-slider span {
-  font-size: 13px;
-  color: #666;
-}
-
 /* 版本对话框样式 */
+.version-dialog .el-dialog__body {
+  padding: 24px;
+}
+
 .change-item {
-  margin-bottom: 10px;
-  padding: 10px;
-  border: 1px solid #eee;
-  border-radius: 6px;
-  background-color: #fafafa;
+  margin-bottom: 16px;
+  padding: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  background-color: rgba(0, 0, 0, 0.02);
 }
 
 .change-item:last-child {
@@ -1456,175 +1810,167 @@ const initVersionHistory = () => {
 .dialog-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
-}
-
-/* 工具栏按钮悬停效果 */
-.toolbar-buttons .el-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  transition: all 0.3s ease;
-}
-
-/* 控制面板悬停效果 */
-.control-toggle:hover {
-  background-color: #3a7bd5;
-  transform: scale(1.05);
-  transition: all 0.3s ease;
-}
-
-/* 右侧信息面板样式 */
-.info-panel {
-  flex-basis: 30%;
-  flex-shrink: 0;
-  flex-grow: 0;
-  min-width: 320px;
-  max-width: 400px;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  padding: 0 16px;
-}
-
-.info-section {
-  flex: 1;
-  min-height: 0;
-}
-
-.section-title {
-  margin: 0 0 16px 0;
-  color: #333;
-  font-size: 18px;
-  font-weight: 600;
-  border-bottom: 2px solid #4f8cff;
-  padding-bottom: 8px;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.section-header .section-title {
-  margin: 0;
-  border-bottom: none;
-  padding-bottom: 0;
-}
-
-.model-info {
-  display: flex;
-  flex-direction: column;
   gap: 12px;
 }
 
-.info-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.7);
-  border-radius: 6px;
-  border-left: 3px solid #4f8cff;
-}
-
-.info-label {
-  font-weight: 500;
-  color: #666;
-  font-size: 14px;
-}
-
-.info-value {
-  color: #333;
-  font-size: 14px;
-  text-align: right;
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.version-content {
-  max-height: 280px;
-  overflow-y: auto;
-}
-
+/* 空数据状态样式 */
 .no-data {
+  padding: 40px 24px;
   text-align: center;
-  padding: 20px;
-  color: #999;
-  font-style: italic;
 }
 
 /* 响应式设计 */
 @media (max-width: 1400px) {
+  .content-wrapper {
+    gap: 24px;
+  }
+  
   .info-panel {
-    min-width: 280px;
-    max-width: 350px;
+    flex: 0 0 350px;
+  }
+  
+  .control-group {
+    min-width: 180px;
   }
 }
 
 @media (max-width: 1200px) {
-  .side-control-panel {
-    position: relative;
-    left: 0;
-    top: 0;
-    width: 100%;
-    margin-bottom: 20px;
-    order: -1;
-  }
-  
-  .el-main {
-    flex-direction: column !important;
-  }
-
-  .model-viewer-container {
-    width: 100%;
-    min-width: auto;
-    max-width: none;
-  }
-
-  .three-container {
-    width: 100%;
-    height: 400px; /* 调整3D模型区域高度 */
-  }
-
-  .model-toolbar {
-    position: relative;
-    top: 0;
-    left: 0;
-    transform: none;
-    width: 100%;
+  .content-wrapper {
     flex-direction: column;
-    align-items: center;
-    padding: 10px 0;
-  }
-
-  .toolbar-section {
-    width: 100%;
-    text-align: center;
-  }
-
-  .toolbar-buttons {
-    justify-content: center;
-  }
-
-  .light-controls {
-    justify-content: center;
-  }
-
-  .info-panel {
-    width: 100%;
-    min-width: auto;
-    max-width: none;
-    padding: 0 12px;
+    gap: 24px;
   }
   
-  .info-item {
+  .info-panel {
+    flex: none;
+    width: 100%;
+  }
+  
+  .control-group {
+    min-width: unset; /* 在小屏幕上取消最小宽度限制 */
+    width: 100%; /* 占据整列 */
+  }
+  
+  .three-container {
+    height: 400px;
+  }
+
+  .light-control-content {
     flex-direction: column;
     align-items: flex-start;
-    gap: 4px;
+  }
+
+  .light-slider-wrapper {
+    width: 100%;
+  }
+
+  .control-buttons .el-button {
+    min-width: unset; /* 在小屏幕上取消最小宽度限制 */
+    width: 100%; /* 按钮占据整行 */
+  }
+}
+
+@media (max-width: 1200px) {
+  .threejs-controls-container {
+    grid-template-columns: repeat(2, 1fr); /* 中等屏幕下变为两列 */
+  }
+}
+
+@media (max-width: 1200px) {
+  .threejs-controls-container {
+    grid-template-columns: repeat(2, 1fr); /* 中等屏幕下变为两列 */
+  }
+}
+
+@media (max-width: 768px) {
+  .threejs-controls-container {
+    grid-template-columns: 1fr; /* 小屏幕下变为单列 */
+  }
+
+  .control-buttons .el-button {
+    min-width: unset; /* 在小屏幕上取消最小宽度限制 */
+    width: 100%; /* 按钮占据整行 */
+  }
+}
+
+@media (max-width: 768px) {
+  .detail-main {
+    padding: 16px;
+  }
+  
+  .header-content {
+    padding: 0 16px;
+  }
+  
+  .detail-title-text {
+    font-size: 20px;
+  }
+  
+  .content-wrapper {
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .version-panel {
+    order: 1;
+    width: 100%;
+    max-height: 400px;
+  }
+  
+  .model-viewer-section {
+    order: 2;
+  }
+  
+  .info-panel {
+    order: 3;
+    width: 100%;
+    flex: none;
+  }
+  
+  .viewer-header {
+    padding: 16px 20px;
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  
+  .viewer-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .model-viewer-container {
+    padding: 16px;
+  }
+  
+  .three-container {
+    height: 300px;
+  }
+  
+  .threejs-controls-container {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .control-group {
+    width: 100%;
+    max-width: 300px;
+  }
+  
+  .section-header {
+    padding: 16px 20px;
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  
+  .model-info {
+    padding: 20px;
+  }
+  
+  .info-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
   }
   
   .info-value {
@@ -1632,36 +1978,125 @@ const initVersionHistory = () => {
     max-width: none;
   }
   
-  .section-header {
-    flex-direction: column;
-    gap: 8px;
-    align-items: flex-start;
+  .version-content {
+    padding: 20px;
   }
 }
 
-@media (max-width: 768px) {
-  .el-main {
-    padding: 8px !important;
+@media (max-width: 480px) {
+  .detail-main {
+    padding: 12px;
+  }
+  
+  .header-content {
+    padding: 0 12px;
+  }
+  
+  .back-btn, .download-btn {
+    font-size: 12px;
+    padding: 8px 12px;
+  }
+  
+  .detail-title-text {
+    font-size: 18px;
+  }
+  
+  .viewer-header {
+    padding: 12px 16px;
   }
   
   .model-viewer-container {
-    margin-bottom: 20px;
+    padding: 12px;
   }
   
-  .info-panel {
-    padding: 0 8px;
+  .three-container {
+    height: 250px;
   }
   
-  .section-title {
-    font-size: 16px;
+  .control-group {
+    padding: 12px;
   }
   
-  .info-item {
-    padding: 6px 8px;
+  .section-header {
+    padding: 12px 16px;
   }
   
-  .info-label, .info-value {
-    font-size: 13px;
+  .model-info {
+    padding: 16px;
   }
+  
+  .version-content {
+    padding: 16px;
+  }
+}
+
+/* 滚动条样式 */
+.version-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.version-content::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 3px;
+}
+
+.version-content::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.version-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* 动画效果 */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.info-section {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.info-section:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+/* 悬停效果增强 */
+.control-group:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+}
+
+.control-buttons .el-button:active {
+  transform: scale(0.95);
+}
+
+/* 标签样式优化 */
+.el-tag {
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+/* 时间轴样式优化 */
+.el-timeline-item__node {
+  background-color: #409eff;
+}
+
+.el-timeline-item__wrapper {
+  padding-left: 20px;
+}
+
+.el-timeline-item__timestamp {
+  color: #999;
+  font-size: 12px;
 }
 </style>
