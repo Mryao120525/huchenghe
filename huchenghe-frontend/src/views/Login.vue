@@ -28,6 +28,7 @@ import { useRouter } from 'vue-router';
 import axios from 'axios';
 import { ElMessage } from 'element-plus';
 import { authAPI } from '@/api';
+import { shouldUseMobileView } from '@/utils/deviceDetection'; // 导入设备检测函数
 const router = useRouter();
 // 设置默认手机号和密码（可改为空串以防泄露测试账号）
 const form = ref({ username: '', password: '' });
@@ -50,7 +51,12 @@ const onLogin = async () => {
     if (res.data.success) {
       errorMsg.value = '';
       localStorage.setItem('hc_authed', '1');
-      router.push('/models');
+      // 根据设备类型进行重定向
+      if (shouldUseMobileView()) {
+        router.push('/mobile/models');
+      } else {
+        router.push('/models');
+      }
     } else {
       errorMsg.value = res.data.message || '账号或密码错误';
     }
@@ -58,7 +64,12 @@ const onLogin = async () => {
     // 登录失败也直接放行：写入本地登录态并跳转主页面
     console.warn('登录失败，按要求直接放行到主页面:', e)
     localStorage.setItem('hc_authed', '1')
-    router.push('/models')
+    // 登录失败也根据设备类型进行重定向
+    if (shouldUseMobileView()) {
+      router.push('/mobile/models');
+    } else {
+      router.push('/models');
+    }
   } finally {
     loading.value = false;
   }

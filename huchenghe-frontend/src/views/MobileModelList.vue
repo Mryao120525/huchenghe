@@ -35,6 +35,26 @@
             </el-select>
           </div>
           
+          <div class="filter-row">
+            <span class="filter-label">主址：</span>
+            <el-input
+              v-model="filterMainSite"
+              placeholder="输入主址搜索"
+              class="filter-item"
+              clearable
+            />
+          </div>
+          
+          <div class="filter-row">
+            <span class="filter-label">区域：</span>
+            <el-input
+              v-model="filterArea"
+              placeholder="输入区域搜索"
+              class="filter-item"
+              clearable
+            />
+          </div>
+          
           <div class="upload-btn">
             <el-button type="success" @click="uploadDialogVisible = true" class="upload-button">
               📤 上传模型
@@ -147,6 +167,8 @@ const router = useRouter()
 const models = ref([])
 const filterName = ref('')
 const filterType = ref('all')
+const filterMainSite = ref('')
+const filterArea = ref('')
 const currentPage = ref(1)
 const pageSize = ref(10)
 const uploadDialogVisible = ref(false)
@@ -165,6 +187,18 @@ const filteredModels = computed(() => {
   
   if (filterType.value !== 'all') {
     result = result.filter(model => model.type === filterType.value)
+  }
+
+  if (filterMainSite.value) {
+    result = result.filter(model =>
+      model.mainSite && model.mainSite.toLowerCase().includes(filterMainSite.value.toLowerCase())
+    )
+  }
+
+  if (filterArea.value) {
+    result = result.filter(model =>
+      model.area && model.area.toLowerCase().includes(filterArea.value.toLowerCase())
+    )
   }
   
   return result
@@ -244,7 +278,7 @@ const getTypeColor = (type) => {
 }
 
 // 监听筛选条件变化
-watch([filterName, filterType], () => {
+watch([filterName, filterType, filterMainSite, filterArea], () => {
   currentPage.value = 1
 })
 
@@ -278,7 +312,7 @@ onMounted(() => {
 .filter-row {
   display: flex;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 16px; /* 统一为 16px */
 }
 
 .filter-label {
@@ -294,7 +328,7 @@ onMounted(() => {
 .upload-btn {
   display: flex;
   gap: 8px;
-  margin-top: 12px;
+  margin-top: 16px; /* 统一为 16px */
 }
 
 .upload-button {

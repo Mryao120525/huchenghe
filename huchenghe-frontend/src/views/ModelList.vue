@@ -50,7 +50,7 @@ ModelList.vue
       <!-- 筛选区 -->
       <div class="filter-bar hc-panel" style="padding:16px 20px;">
         <span style="margin-right: 4px;">模型名称：</span>
-        <el-input v-model="filterName" placeholder="名称" class="filter-item" style="width: 120px;" />
+        <el-input v-model="filterName" placeholder="名称" class="filter-item" style="width: 120px;" clearable />
         <span style="margin-right: 4px;">类别：</span>
         <el-select v-model="filterType" placeholder="类别" class="filter-item filter-type" style="width: 120px;">
           <el-option label="全部" value="all" />
@@ -59,6 +59,14 @@ ModelList.vue
           <el-option label="雕塑" value="雕塑" />
           <el-option label="造像" value="造像" />
           <el-option label="其他" value="其他" />
+        </el-select>
+        <span style="margin-right: 4px;">主址：</span>
+        <el-select v-model="filterMainSite" placeholder="主址" class="filter-item" style="width: 120px;">
+          <el-option v-for="site in mainSites" :key="site" :label="site === 'all' ? '全部' : site" :value="site" />
+        </el-select>
+        <span style="margin-right: 4px;">区域：</span>
+        <el-select v-model="filterArea" placeholder="区域" class="filter-item" style="width: 120px;">
+          <el-option v-for="area in areas" :key="area" :label="area === 'all' ? '全部' : area" :value="area" />
         </el-select>
         <div class="upload-btn" style="display: flex; align-items: center; gap: 8px;">
           <el-button type="success" @click="uploadDialogVisible = true">上传模型</el-button>
@@ -173,6 +181,11 @@ const selectedItems = ref([]);
 
 // 名称筛选
 const filterName = ref("");
+const filterMainSite = ref("all"); // 默认为 'all'
+const filterArea = ref("all");     // 默认为 'all'
+
+const mainSites = ref([]); // 存储主址列表
+const areas = ref([]);     // 存储区域列表
 
 // 处理弹窗确认事件
 const handleUploadConfirm = async (modelInfo) => {
@@ -423,6 +436,18 @@ const tableData = ref([]);
 
 const fetchData = async () => {
   try {
+    // 1. 获取所有模型数据（不带分页和筛选），用于提取主址和区域列表
+    // 假设 modelAPI.getModels() 在不带参数时返回所有模型数据
+    // 1. 获取所有模型数据（不带分页和筛选），用于提取主址和区域列表
+    // 假设 modelAPI.getModels() 在不带参数时返回所有模型数据
+    // 为了避免重复调用，可以在组件挂载时只调用一次，或者在数据更新后重新提取
+    // 这里为了确保下拉列表始终是最新的，每次 fetchData 都重新获取
+    const allModelsResponse = await modelAPI.getModels();
+    const allModels = allModelsResponse.data || [];
+    mainSites.value = extractUniqueValues(allModels, 'address');
+    areas.value = extractUniqueValues(allModels, 'area');
+
+    // 2. 根据当前筛选和分页参数获取实际显示的模型数据
     const params = {
       page: currentPage.value,
       pageSize: pageSize
@@ -435,6 +460,14 @@ const fetchData = async () => {
     if (filterType.value !== 'all') {
       params.type = filterType.value;
     }
+
+    if (filterMainSite.value !== 'all') {
+      params.mainSite = filterMainSite.value;
+    }
+
+    if (filterArea.value !== 'all') {
+      params.area = filterArea.value;
+    }
     
     const response = await modelAPI.getModels(params);
     tableData.value = response.data;
@@ -442,12 +475,25 @@ const fetchData = async () => {
     // 获取总数用于分页
     const countResponse = await modelAPI.getModelCount({
       name: filterName.value,
-      type: filterType.value !== 'all' ? filterType.value : undefined
+      type: filterType.value !== 'all' ? filterType.value : undefined,
+      mainSite: filterMainSite.value !== 'all' ? filterMainSite.value : undefined,
+      area: filterArea.value !== 'all' ? filterArea.value : undefined
     });
     total.value = countResponse.data.total;
   } catch (error) {
     console.error('获取模型数据失败:', error);
   }
+};
+
+// 提取唯一值函数
+const extractUniqueValues = (data, key) => {
+  const values = new Set();
+  data.forEach(item => {
+    if (item[key]) {
+      values.add(item[key]);
+    }
+  });
+  return ['all', ...Array.from(values)]; // 添加 '全部' 选项
 };
 
 const filteredTableData = computed(() => {
@@ -456,7 +502,7 @@ const filteredTableData = computed(() => {
 
 // 当筛选条件变化时，自动跳转回第一页
 import { watch } from 'vue';
-watch([filterType, filterName], () => {
+watch([filterType, filterName, filterMainSite, filterArea], () => {
   currentPage.value = 1;
   fetchData();
 });
