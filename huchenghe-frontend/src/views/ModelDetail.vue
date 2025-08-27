@@ -1,6 +1,23 @@
 <!--
 ModelDetail.vue
 三维模型管理系统的模型详情页，展示单个模型的详细信息。
+
+## 页面结构
+- **主容器 (`.main-container`)**: 整个页面的布局容器。
+  - **页面头部 (`.detail-header`)**: 包含返回按钮、页面标题和下载模型按钮。
+  - **主要内容区域 (`.detail-main`)**: 包含左侧版本历史面板、中间3D模型显示区域和右侧信息面板。
+    - **左侧版本历史面板 (`.version-panel`)**: 展示模型的版本历史记录，并提供添加新记录的按钮。
+      - **版本历史列表 (`.version-content`)**: 使用 `el-timeline` 展示详细的版本记录。
+    - **中间3D模型显示区域 (`.model-viewer-section`)**: 包含3D模型预览区域和3D控制工具栏。
+      - **3D模型预览容器 (`.model-viewer-container`)**: 实际渲染3D模型的区域 (`#three-container`)。
+      - **3D控制工具栏 (`.threejs-controls-container`)**: 包含多个控制组，用于操作3D场景和模型。
+        - **场景控制 (`.control-group.scene-controls`)**: 控制网格、坐标轴、材质的显示/隐藏。
+        - **模型操作 (`.control-group.model-controls`)**: 重置视角、切换线框模式。
+        - **贴图控制 (`.control-group.texture-controls`)**: 增强/减弱贴图强度、显示/隐藏贴图。
+        - **灯光控制 (`.control-group.light-controls`)**: 开启/关闭环境光、调整主光源和环境光强度。
+    - **右侧信息面板 (`.info-panel`)**: 展示模型的详细属性信息。
+      - **模型属性列表 (`.model-info`)**: 以键值对形式展示模型名称、ID、区域、主址、数量、创建时间、更新时间等。
+  - **版本记录添加对话框 (`<el-dialog>`)**: 用于添加新的版本记录的表单。
 -->
 
 <template>
@@ -1339,16 +1356,16 @@ const initVersionHistory = () => {
 .main-container {
   position: relative;
   z-index: 1;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #f7f8fa; /* 更改为白色背景 */
   min-height: 100vh;
 }
 
 /* 页面头部样式 */
 .detail-header {
-  background: rgba(255, 255, 255, 0.95);
+  background: linear-gradient(90deg, #4f8cff, #667eea); /* 蓝色色调渐变 */
   backdrop-filter: blur(15px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-  height: 80px;
+  height: 64px; /* 调整为与ModelList.vue一致的高度 */
   display: flex;
   align-items: center;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
@@ -1378,14 +1395,15 @@ const initVersionHistory = () => {
 }
 
 .detail-title-text {
-  color: #333;
-  font-size: 24px;
-  font-weight: 700;
+  color: #fff; /* 更改为白色 */
+  font-size: 24px; /* 保持与ModelList.vue一致 */
+  font-weight: bold; /* 保持与ModelList.vue一致 */
   margin: 0;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  /* 移除背景渐变和文本填充，直接使用白色 */
+  /* background: linear-gradient(135deg, #667eea, #764ba2); */
+  /* -webkit-background-clip: text; */
+  /* -webkit-text-fill-color: transparent; */
+  /* background-clip: text; */
   text-shadow: none;
 }
 
@@ -1420,13 +1438,13 @@ const initVersionHistory = () => {
 .version-panel {
   width: 300px;
   flex-shrink: 0;
-  background: transparent; /* 修改为透明背景 */
-  backdrop-filter: none; /* 移除模糊效果 */
+  background: rgba(255, 255, 255, 0.95); /* 与页面主题风格一致的背景 */
+  backdrop-filter: blur(15px); /* 添加模糊效果 */
   border-radius: 16px;
-  box-shadow: none; /* 移除阴影 */
-  border: 1px solid rgba(255, 255, 255, 0.1); /* 调整边框透明度 */
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1); /* 添加阴影 */
+  border: 1px solid #4f8cff; /* 添加1像素蓝色边框 */
   overflow: hidden;
-  max-height: 800px;
+  max-height: 800px; /* 恢复到原来的高度 */
   overflow-y: auto;
 }
 
@@ -1481,7 +1499,7 @@ const initVersionHistory = () => {
 
 .three-container {
   width: 100%;
-  height: 500px;
+  height: 375px; /* 缩小为原来的四分之三 (500 * 0.75) */
   border: 3px solid #4f8cff;
   border-radius: 12px;
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
@@ -1503,28 +1521,28 @@ const initVersionHistory = () => {
   display: grid;
   grid-template-columns: repeat(4, 1fr); /* 四列布局 */
   gap: 16px; /* 控制组之间的距离 */
-  margin-top: 24px;
+  margin-top: 14px; /* 整体向上提高10px */
   padding: 0 24px; /* 保持与模型容器的左右对齐 */
 }
 
 .control-group {
-  background: transparent; /* 修改为透明背景 */
-  backdrop-filter: none; /* 移除模糊效果 */
-  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.95); /* 与页面主题风格一致的背景 */
+  backdrop-filter: blur(15px); /* 添加模糊效果 */
+  border-radius: 16px; /* 调整圆角与页面其他模块一致 */
   padding: 16px;
-  box-shadow: none; /* 移除阴影 */
-  border: 1px solid rgba(255, 255, 255, 0.1); /* 调整边框透明度 */
-  min-width: 200px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1); /* 添加阴影 */
+  border: 1px solid #4f8cff; /* 添加蓝色边框 */
+  min-width: 200px; /* 恢复最小宽度，以容纳更宽的按钮 */
 }
 
 .control-title {
-  margin: 0 0 12px 0;
+  margin: 0 0 9px 0; /* 缩小为原来的四分之三 (12 * 0.75) */
   color: #333;
-  font-size: 14px;
+  font-size: 10.5px; /* 缩小为原来的四分之三 (14 * 0.75) */
   font-weight: 600;
   text-align: center;
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-  padding-bottom: 8px;
+  padding-bottom: 6px; /* 缩小为原来的四分之三 (8 * 0.75) */
 }
 
 .control-buttons {
@@ -1532,13 +1550,14 @@ const initVersionHistory = () => {
   flex-direction: column; /* 垂直排列 */
   gap: 8px;
   padding: 0 16px; /* 增加左右内边距 */
+  align-items: center; /* 按钮居中 */
 }
 
 .control-buttons .el-button {
-  width: 100%; /* 按钮占据可用宽度 */
-  height: 36px; /* 统一按钮高度 */
-  justify-content: flex-start; /* 按钮文本左对齐 */
-  border-radius: 8px;
+  width: 90px; /* 缩小为原来的四分之三 (120 * 0.75) */
+  height: 24px; /* 缩小为原来的四分之三 (32 * 0.75) */
+  justify-content: center; /* 按钮文本居中 */
+  border-radius: 6px; /* 适当缩小圆角 */
   transition: all 0.3s ease;
 }
 
@@ -1592,9 +1611,9 @@ const initVersionHistory = () => {
 
 .light-control-content .el-button {
   width: 100%; /* 按钮占据可用宽度 */
-  height: 36px; /* 统一按钮高度 */
+  height: 27px; /* 缩小为原来的四分之三 (36 * 0.75) */
   justify-content: flex-start; /* 按钮文本左对齐 */
-  border-radius: 8px;
+  border-radius: 6px; /* 适当缩小圆角 */
   transition: all 0.3s ease;
 }
 
@@ -1610,7 +1629,7 @@ const initVersionHistory = () => {
 }
 
 .light-slider-wrapper .light-label {
-  font-size: 12px;
+  font-size: 9px; /* 缩小为原来的四分之三 (12 * 0.75) */
   color: #666;
   font-weight: 500;
   flex-shrink: 0;
@@ -1627,7 +1646,8 @@ const initVersionHistory = () => {
   flex: 0 0 320px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 24px; /* 恢复到原来的间距 */
+  /* 移除max-height */
 }
 
 .info-section {
@@ -1635,8 +1655,9 @@ const initVersionHistory = () => {
   backdrop-filter: blur(15px);
   border-radius: 16px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid #4f8cff; /* 添加1像素蓝色边框 */
   overflow: hidden;
+  /* 移除内边距调整 */
 }
 
 .section-header {
@@ -1651,15 +1672,15 @@ const initVersionHistory = () => {
 .section-title {
   margin: 0;
   color: #333;
-  font-size: 16px;
+  font-size: 16px; /* 恢复到原来的大小 */
   font-weight: 600;
 }
 
 .model-info {
-  padding: 20px;
+  padding: 20px; /* 恢复到原来的内边距 */
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 12px; /* 恢复到原来的间距 */
 }
 
 .info-item {
@@ -1679,21 +1700,21 @@ const initVersionHistory = () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 16px;
+  padding: 12px 16px; /* 恢复到原来的内边距 */
 }
 
 .info-label {
   font-weight: 500;
   color: #666;
-  font-size: 13px;
+  font-size: 13px; /* 恢复到原来的大小 */
 }
 
 .info-value {
   color: #333;
-  font-size: 13px;
+  font-size: 13px; /* 恢复到原来的大小 */
   font-weight: 500;
   text-align: right;
-  max-width: 180px;
+  max-width: 180px; /* 恢复到原来的宽度 */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1701,8 +1722,8 @@ const initVersionHistory = () => {
 
 /* 版本历史样式 */
 .version-content {
-  padding: 20px;
-  max-height: 600px;
+  padding: 20px; /* 恢复到原来的内边距 */
+  max-height: 600px; /* 恢复到原来的高度 */
   overflow-y: auto;
 }
 
@@ -1720,24 +1741,24 @@ const initVersionHistory = () => {
 .version-number {
   font-weight: 700;
   color: #409eff;
-  font-size: 14px;
+  font-size: 14px; /* 恢复到原来的大小 */
 }
 
 .version-details {
-  font-size: 12px;
+  font-size: 12px; /* 恢复到原来的大小 */
   color: #666;
 }
 
 .operator {
-  margin: 6px 0;
+  margin: 6px 0; /* 恢复到原来的外边距 */
   font-weight: 500;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 4px; /* 恢复到原来的间距 */
 }
 
 .description {
-  margin: 6px 0;
+  margin: 6px 0; /* 恢复到原来的外边距 */
   color: #333;
   line-height: 1.4;
 }
@@ -1752,9 +1773,9 @@ const initVersionHistory = () => {
 
 .changes-title {
   font-weight: 600;
-  margin-bottom: 6px;
+  margin-bottom: 6px; /* 恢复到原来的外边距 */
   color: #333;
-  font-size: 11px;
+  font-size: 11px; /* 恢复到原来的大小 */
 }
 
 .changes-list ul {
@@ -1763,11 +1784,11 @@ const initVersionHistory = () => {
 }
 
 .changes-list li {
-  margin: 3px 0;
+  margin: 3px 0; /* 恢复到原来的外边距 */
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 11px;
+  gap: 4px; /* 恢复到原来的间距 */
+  font-size: 11px; /* 恢复到原来的大小 */
 }
 
 .change-field {
@@ -1782,7 +1803,7 @@ const initVersionHistory = () => {
 
 .change-arrow {
   color: #909399;
-  font-size: 10px;
+  font-size: 10px; /* 恢复到原来的大小 */
 }
 
 .change-new {
@@ -2097,6 +2118,6 @@ const initVersionHistory = () => {
 
 .el-timeline-item__timestamp {
   color: #999;
-  font-size: 12px;
+  font-size: 12px; /* 恢复到原来的大小 */
 }
 </style>

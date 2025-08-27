@@ -577,9 +577,10 @@ const handleDelete = async (row) => {
 }
 .header-title {
   /* 渐变背景动画 */
-  background: linear-gradient(270deg, #4f8cff, #6ee7b7, #fbbf24, #f87171, #4f8cff);
-  background-size: 1000% 100%;
-  animation: gradientMove 8s ease-in-out infinite;
+  background: linear-gradient(90deg, #4f8cff, #667eea); /* 蓝色色调渐变 */
+  background-size: 100% 100%; /* 调整背景大小 */
+  /* 移除动画，如果需要动画可以重新添加蓝色调的动画 */
+  /* animation: gradientMove 8s ease-in-out infinite; */
   display: flex;
   align-items: center;
   justify-content: center;
